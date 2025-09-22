@@ -16,57 +16,60 @@ export default function Hero() {
         <div className="absolute inset-0 bg-black/20"></div>
       </div>
 
-      {/* Enhanced Animated background elements with aura effects */}
-      <div className="absolute inset-0">
-        {/* Main radial gradient overlay */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_800px_at_50%_200px,rgba(59,130,246,0.2),transparent)]" />
-        {/* Secondary radial gradient */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_600px_at_80%_300px,rgba(20,184,166,0.15),transparent)]" />
-        {/* Grid pattern overlay */}
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(59,130,246,0.1)_1px,transparent_1px),linear-gradient(to_bottom,rgba(59,130,246,0.1)_1px,transparent_1px)] bg-[size:20px_20px]" />
-        
-        {/* Large aura lights */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-teal-600/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/3 right-1/3 w-80 h-80 bg-blue-500/15 rounded-full blur-3xl animate-pulse delay-500"></div>
-        <div className="absolute bottom-1/3 left-1/3 w-72 h-72 bg-teal-500/15 rounded-full blur-3xl animate-pulse delay-1500"></div>
-        
-        {/* Medium aura lights */}
-        <div className="absolute top-1/2 left-1/6 w-64 h-64 bg-blue-400/10 rounded-full blur-2xl animate-pulse delay-700"></div>
-        <div className="absolute bottom-1/2 right-1/6 w-64 h-64 bg-teal-400/10 rounded-full blur-2xl animate-pulse delay-1200"></div>
-        
-        {/* Small accent lights */}
-        <div className="absolute top-1/5 right-1/5 w-48 h-48 bg-orange-500/8 rounded-full blur-2xl animate-pulse delay-300"></div>
-        <div className="absolute bottom-1/5 left-1/5 w-48 h-48 bg-orange-400/8 rounded-full blur-2xl animate-pulse delay-1800"></div>
-        
-        {/* Gradient overlays for depth */}
-        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-500/8 via-transparent to-teal-500/8"></div>
-        <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-bl from-teal-500/6 via-transparent to-blue-500/6"></div>
-      </div>
+      {/* -- Edge polish (sexy edges like purple version) -------------------------------- */}
+      <div className="absolute inset-0 pointer-events-none -z-0">
+        {/* Clean grid with edge fade */}
+        <div
+          className="
+            absolute inset-0
+            bg-[linear-gradient(to_right,rgba(59,130,246,0.11)_1px,transparent_1px),linear-gradient(to_bottom,rgba(59,130,246,0.11)_1px,transparent_1px)]
+            bg-[size:26px_26px]
+            [mask-image:radial-gradient(120%_100%_at_50%_50%,#000_55%,transparent)]
+            [-webkit-mask-image:radial-gradient(120%_100%_at_50%_50%,#000_55%,transparent)]
+          "
+        />
 
-      {/* Floating particles effect */}
+        {/* Subtle center glow */}
+        <div className="absolute inset-0 bg-[radial-gradient(800px_500px_at_50%_45%,rgba(59,130,246,0.18),transparent_70%)]" />
+
+        {/* Corner glows */}
+        <div className="absolute -top-24 -left-24 w-[32rem] h-[32rem] rounded-full bg-blue-600/25 blur-3xl" />
+        <div className="absolute -bottom-24 -right-24 w-[32rem] h-[32rem] rounded-full bg-teal-500/25 blur-3xl" />
+
+        {/* Inner vignette */}
+        <div className="absolute inset-0 shadow-[inset_0_0_140px_rgba(0,0,0,0.5)]" />
+
+        {/* Top/bottom edge light */}
+        <div className="absolute inset-0 bg-[radial-gradient(1000px_240px_at_50%_-120px,rgba(255,255,255,0.08),transparent),radial-gradient(1000px_240px_at_50%_calc(100%+120px),rgba(255,255,255,0.07),transparent)]" />
+      </div>
+      {/* ------------------------------------------------------------------------ */}
+
+      {/* Floating particles (bolder + faster) */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {[...Array(15)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute w-1 h-1 bg-blue-400/20 rounded-full"
+            className="absolute rounded-full bg-blue-400/40 shadow-[0_0_6px_rgba(59,130,246,0.6)]"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
+              width: `${Math.random() * 3 + 2}px`,  // randomized size 2–5px
+              height: `${Math.random() * 3 + 2}px`,
             }}
             animate={{
-              y: [-20, -100],
+              y: [-30, -140],
               opacity: [0, 1, 0],
             }}
             transition={{
-              duration: Math.random() * 4 + 3,
+              duration: Math.random() * 3 + 2, // faster: 2–5s
               repeat: Infinity,
-              delay: Math.random() * 3,
+              delay: Math.random() * 2,
             }}
           />
         ))}
       </div>
 
+      {/* Content */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <div className="max-w-4xl mx-auto">
           {/* Badge */}
@@ -101,11 +104,21 @@ export default function Hero() {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16 animate-slideUp delay-600">
-            <a href="https://calendly.com/ahmorsy07/ai-booking-demo" target="_blank" rel="noopener noreferrer" className="group bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-200 hover:scale-105 hover:shadow-xl flex items-center justify-center">
+            <a
+              href="https://calendly.com/ahmorsy07/ai-booking-demo"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-200 hover:scale-105 hover:shadow-xl flex items-center justify-center"
+            >
               Get Your First Calls Booked
               <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform duration-200" />
             </a>
-            <a href="https://drive.google.com/file/d/180_FWUK_2bJqwHhPqqQRoSMvOjEXhRgj/view" target="_blank" rel="noopener noreferrer" className="group bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-200 hover:scale-105 border border-white/20 flex items-center justify-center">
+            <a
+              href="https://drive.google.com/file/d/180_FWUK_2bJqwHhPqqQRoSMvOjEXhRgj/view"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-200 hover:scale-105 border border-white/20 flex items-center justify-center"
+            >
               <Play className="mr-2 w-5 h-5" />
               Watch Demo (2 min)
             </a>

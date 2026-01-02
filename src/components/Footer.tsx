@@ -79,7 +79,7 @@ export default function Footer() {
         <div className="border-t border-gray-800 pt-8 mt-12">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="text-gray-400 text-sm mb-4 md:mb-0">
-              © 2025 BookedByCold. All rights reserved.
+              © 2026 BookedByCold. All rights reserved.
             </div>
           </div>
         </div>

@@ -4,11 +4,11 @@ import Reveal from './Reveal';
 // Edit these to update the figures shown in the section (keep both languages in sync).
 const numbers = t({
   ar: [
-    { value: '+200,000', unit: 'ريال', description: 'مبيعات حققها العميل' },
+    { value: '+250,000', unit: 'ريال', description: 'مبيعات حققها العميل' },
     { value: '+70,000', unit: 'ريال', description: 'مبيعات خلال شهرين' },
   ],
   en: [
-    { value: '+200,000', unit: 'SAR', description: 'in sales for a client' },
+    { value: '+250,000', unit: 'SAR', description: 'in sales for a client' },
     { value: '+70,000', unit: 'SAR', description: 'in sales in two months' },
   ],
 });

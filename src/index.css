@@ -2,7 +2,47 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 
+/*
+  Site font: Fatimah Arabic (same as the Seet site), used for Arabic and English.
+  Regular covers normal/medium/semibold text; Heavy covers bold and up.
+  Limited to Arabic ranges: its Latin glyphs (apostrophes, digits) look wrong, so Latin
+  letters, digits and punctuation fall through to the system font.
+*/
+@font-face {
+  font-family: 'Fatimah Arabic';
+  src: url('/fonts/FatimahArabic-Regular.woff') format('woff');
+  font-weight: 400 600;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF, U+060C, U+061B, U+061F, U+00A0, U+200C-200F;
+}
+@font-face {
+  font-family: 'Fatimah Arabic';
+  src: url('/fonts/FatimahArabic-Heavy.woff') format('woff');
+  font-weight: 700 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF, U+060C, U+061B, U+061F, U+00A0, U+200C-200F;
+}
+
 @layer base {
+  /* Brand palette (Digimarkss brand kit), stored as RGB channels for Tailwind opacity modifiers */
+  :root {
+    --color-primary: 31 154 46;        /* #1F9A2E — buttons, links, selected UI */
+    --color-primary-hover: 22 112 35;  /* #167023 — kit's link hover */
+    --color-bright: 47 191 63;         /* #2FBF3F */
+    --color-lime: 126 217 87;          /* #7ED957 — sparing highlights only */
+    --color-heading: 15 26 20;         /* #0F1A14 — also the darkest hero shade */
+    --color-forest: 20 61 32;          /* #143D20 — mid shade for dark green gradients */
+    --color-body: 74 87 79;            /* #4A574F */
+    --color-muted: 107 122 113;        /* #6B7A71 */
+    --color-surface: 244 248 244;      /* #F4F8F4 — page background */
+    --color-mint: 227 242 228;         /* #E3F2E4 — light mint section background */
+    --color-card: 255 255 255;         /* #FFFFFF */
+    --color-line: 227 234 228;         /* #E3EAE4 */
+    --color-line-strong: 219 227 220;  /* #DBE3DC */
+  }
+
   * {
     scroll-behavior: smooth;
   }

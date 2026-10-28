@@ -270,12 +270,10 @@ export default function CaseStudy({ story }: { story: Case }) {
 
           <div className="flex flex-wrap items-center gap-4 border-t border-line pt-10">
             <a
-              href="https://calendly.com/ahmorsy07/ai-booking-demo"
-              target="_blank"
-              rel="noopener noreferrer"
+              href={sectionHref('#talk')}
               className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-lg font-semibold transition-colors"
             >
-              {t({ ar: 'تبي شي مثله لشركتك؟ احجز مكالمة', en: 'Want something like this for your company? Book a call' })}
+              {t({ ar: 'تبي شي مثله لشركتك؟ ارسل لي طلبك', en: 'Want something like this for your company? Tell me about it' })}
             </a>
             <a href={sectionHref('#work')} className="font-semibold text-primary hover:text-primary-hover transition-colors">
               {t({ ar: 'شوف باقي المشاريع', en: 'See other case studies' })}

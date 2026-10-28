@@ -26,7 +26,7 @@ export default function Header() {
       { href: '#reviews', label: 'Reviews' },
     ],
   });
-  const bookCall = t({ ar: 'احجز مكالمة', en: 'Book a call' });
+  const bookCall = t({ ar: 'تواصل معي', en: 'Get in touch' });
   // Label is written in the language it switches to
   const switchLabel = t({ ar: 'English', en: 'عربي' });
   const switchLang = lang === 'ar' ? 'en' : 'ar';
@@ -71,7 +71,7 @@ export default function Header() {
             >
               {switchLabel}
             </a>
-            <a href="https://calendly.com/ahmorsy07/ai-booking-demo" target="_blank" rel="noopener noreferrer" className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 hover:scale-105 hover:shadow-lg">
+            <a href={sectionHref('#talk')} className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 hover:scale-105 hover:shadow-lg">
               {bookCall}
             </a>
           </nav>
@@ -108,7 +108,7 @@ export default function Header() {
               >
                 {switchLabel}
               </a>
-              <a href="https://calendly.com/ahmorsy07/ai-booking-demo" target="_blank" rel="noopener noreferrer" className="block w-full bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200 text-center">
+              <a href={sectionHref('#talk')} className="block w-full bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200 text-center">
                 {bookCall}
               </a>
             </nav>

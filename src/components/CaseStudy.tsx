@@ -271,7 +271,7 @@ export default function CaseStudy({ story }: { story: Case }) {
           <div className="flex flex-wrap items-center gap-4 border-t border-line pt-10">
             <a
               href={sectionHref('#talk')}
-              className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+              className="bg-heading hover:bg-forest text-white px-8 py-4 rounded-xl text-lg sm:text-xl font-bold shadow-lg transition-colors"
             >
               {t({ ar: 'تبي شي مثله لشركتك؟ ارسل لي طلبك', en: 'Want something like this for your company? Tell me about it' })}
             </a>

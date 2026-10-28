@@ -73,7 +73,7 @@ export default function Hero() {
           {/* Introduction (on the reading side: right in Arabic, left in English) */}
           <div className="flex-1 min-w-0">
             {/* Badge */}
-            <div className="inline-flex items-center px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-white/90 text-sm sm:text-base font-medium mb-8 animate-fadeIn">
+            <div className="inline-flex items-center px-5 py-2.5 bg-white/20 ring-1 ring-inset ring-white/40 backdrop-blur-sm rounded-full text-white text-lg sm:text-xl font-bold mb-8 animate-fadeIn">
               <span className="w-2 h-2 bg-lime rounded-full me-2 animate-pulse"></span>
               {t({ ar: 'أهلاً، أنا', en: <>Hi, I<span className="font-[system-ui]">’</span>m</> })}
             </div>

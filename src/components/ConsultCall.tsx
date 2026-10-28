@@ -3,9 +3,12 @@ import { ArrowLeft, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
 import { dir, lang, t } from '../i18n';
 import Reveal from './Reveal';
 
-// Where the request is sent: an n8n (or similar) webhook, set as VITE_CONSULT_WEBHOOK_URL.
-// It receives a JSON POST and must answer 2xx once the message is really handed off.
-const WEBHOOK_URL = import.meta.env.VITE_CONSULT_WEBHOOK_URL as string | undefined;
+// Where the request is sent: an n8n webhook. It receives a JSON POST and must answer 2xx once the
+// message is really handed off. It is a public endpoint (visible in the browser anyway), so it is built
+// in; VITE_CONSULT_WEBHOOK_URL can still override it, e.g. to point at a test workflow.
+const WEBHOOK_URL =
+  (import.meta.env.VITE_CONSULT_WEBHOOK_URL as string | undefined) ||
+  'https://n8n-production-6d8a0.up.railway.app/webhook/ahmed-farag';
 
 type Fields = { name: string; email: string; business: string; problem: string; notes: string };
 type Errors = Partial<Record<'name' | 'email' | 'problem', string>>;

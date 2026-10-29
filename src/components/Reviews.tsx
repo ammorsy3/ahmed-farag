@@ -23,6 +23,13 @@ const reviews: Review[] = [
     photo: '/reviews/andrew-vargas.jpg',
     location: 'US',
   },
+  {
+    name: 'Sara Almujel',
+    text: 'تجربتي بالعمل مع أحمد رائعة 🤩 عمل معي على إنشاء وتطوير موقع إلكتروني لمشروعي الخاص وكان مسؤول عن تطوير الموقع بالكامل وقدم نتيجة ممتازة من ناحية جودة الخدمة والتنفيذ وسرعة التجاوب طوال فترة العمل. تجربة مميزة وأوصي فيه بكل ثقة',
+    rating: 5,
+    url: 'https://www.trustpilot.com/reviews/6ae25af7f6300565ec600612',
+    photo: '/reviews/sara-almujel.png',
+  },
 ];
 
 function Stars({ rating }: { rating: number }) {

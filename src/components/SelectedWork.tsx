@@ -40,6 +40,13 @@ const projects: Project[] = t<Project[]>({
       badge: false,
       visual: 'video',
     },
+    {
+      title: 'بوثك',
+      description: 'منصة سعودية لإدارة وحجز البوثات في المعارض والفعاليات: تنشئ معرضك، وتفتح الحجز للعارضين، وتتابع المدفوعات من لوحة تحكم واحدة.',
+      tags: ['حجز البوثات', 'إدارة المعارض', 'خريطة البوثات', 'متابعة المدفوعات', 'لوحة تحكم'],
+      url: 'https://boothksa.com/',
+      image: { src: '/work/booth.webp', alt: 'أيقونة منصة بوثك' },
+    },
   ],
   en: [
     {
@@ -63,6 +70,13 @@ const projects: Project[] = t<Project[]>({
       caseHref: '/work/voice-agent',
       badge: false,
       visual: 'video',
+    },
+    {
+      title: 'Boothk',
+      description: 'A Saudi platform for booking and managing booths at exhibitions and events: create your exhibition, open booking to exhibitors, and track payments from one dashboard.',
+      tags: ['Booth booking', 'Exhibition management', 'Booth map', 'Payment tracking', 'Dashboard'],
+      url: 'https://boothksa.com/',
+      image: { src: '/work/booth.webp', alt: 'Boothk icon' },
     },
   ],
 });

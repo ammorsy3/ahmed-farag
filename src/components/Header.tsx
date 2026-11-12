@@ -35,13 +35,8 @@ export default function Header() {
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4 lg:py-6" dir={dir} lang={lang}>
-          <div className="flex-shrink-0">
-            <h1 className={`text-2xl font-bold transition-colors duration-300 ${
-              isScrolled ? 'text-heading' : 'text-white'
-            }`}>
-              Ahmed Farag
-            </h1>
-          </div>
+          {/* Brand name removed (the name lives in the hero); empty slot keeps the nav layout */}
+          <div className="flex-shrink-0" aria-hidden="true" />
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-8">

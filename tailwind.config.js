@@ -11,6 +11,20 @@ export default {
         // Site-wide font (Arabic and English); falls back to the system font stack
         sans: ['"Fatimah Arabic"', ...defaultTheme.fontFamily.sans],
       },
+      keyframes: {
+        marquee: {
+          from: { transform: 'translateX(0)' },
+          to: { transform: 'translateX(calc(-100% - var(--gap)))' },
+        },
+        'marquee-vertical': {
+          from: { transform: 'translateY(0)' },
+          to: { transform: 'translateY(calc(-100% - var(--gap)))' },
+        },
+      },
+      animation: {
+        marquee: 'marquee var(--duration) infinite linear',
+        'marquee-vertical': 'marquee-vertical var(--duration) infinite linear',
+      },
       colors: {
         primary: { DEFAULT: token('primary'), hover: token('primary-hover') },
         bright: token('bright'),
@@ -18,10 +32,14 @@ export default {
         heading: token('heading'),
         forest: token('forest'),
         body: token('body'),
-        muted: token('muted'),
+        muted: { DEFAULT: token('muted'), foreground: token('muted') },
         surface: token('surface'),
         mint: token('mint'),
-        card: token('card'),
+        card: { DEFAULT: token('card'), foreground: token('heading') },
+        // shadcn semantic names, mapped onto the brand palette
+        background: token('surface'),
+        foreground: token('heading'),
+        border: token('line'),
         line: { DEFAULT: token('line'), strong: token('line-strong') },
       },
     },

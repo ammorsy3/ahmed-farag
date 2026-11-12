@@ -101,3 +101,17 @@
     transform: translateY(0);
   }
 }
+/* Hero workflow connectors: dashes travel along the path */
+.hero-flow {
+  animation: heroFlow 1.2s linear infinite;
+}
+@keyframes heroFlow {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-flow {
+    animation: none;
+  }
+}

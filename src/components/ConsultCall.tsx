@@ -19,13 +19,13 @@ const empty: Fields = { name: '', email: '', business: '', message: '' };
 
 const copy = t({
   ar: {
-    heading: 'خلّنا نتكلم',
+    heading: 'وش تبي نبني سوا؟',
     description:
       'تبي تأتمت شغلك، أو تستفيد من الذكاء الاصطناعي، أو تبني تطبيق أو موقع؟ احكِ لي باختصار وأرد عليك على إيميلك.',
     button: 'إرسال',
     name: 'الاسم',
     email: 'الإيميل',
-    business: 'نشاطك أو موقعك',
+    business: 'اسم شركتك أو موقعها',
     need: 'وش تحتاج؟',
     message: 'احكِ لي باختصار',
     placeholders: {
@@ -53,7 +53,7 @@ const copy = t({
     button: 'Send',
     name: 'Name',
     email: 'Email',
-    business: 'Business or website',
+    business: 'Company name or website',
     need: 'What do you need?',
     message: 'Tell me a bit about it',
     placeholders: {

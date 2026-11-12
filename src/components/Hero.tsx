@@ -1,8 +1,69 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { dir, lang, t } from '../i18n';
+import HeroWorkflow from './HeroWorkflow';
+
+// Phrases typed under the name. Framework: "I [do X]" = what I do + qualification + who I've helped.
+const PHRASES = {
+  ar: [
+    'أبني أنظمة وأدوات كنت أتمنى تكون موجودة، غالباً بالذكاء الاصطناعي.',
+    'أتخصص بالذكاء الاصطناعي، وأخلّيه يشتغل لصالحك.',
+    'أسوي أنظمة وأدوات بالذكاء الاصطناعي تختصر عليك ساعات من الشغل.',
+  ],
+  en: [
+    'I build the systems and tools I wish already existed, usually with AI.',
+    'I specialize in AI, and I make it work in your favor.',
+    'I build AI-powered systems and tools that save you hours of work.',
+  ],
+};
+
+function useTypewriter(phrases: string[]) {
+  const [text, setText] = useState('');
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setText(phrases[0]);
+      return;
+    }
+    let i = 0;
+    let n = 0;
+    let deleting = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      const full = phrases[i];
+      n += deleting ? -1 : 1;
+      setText(full.slice(0, n));
+      let delay = deleting ? 44 : 55; // deleting takes 0.8x the time per character (a bit faster)
+      if (!deleting && n === full.length) {
+        deleting = true;
+        delay = 2200;
+      } else if (deleting && n === 0) {
+        deleting = false;
+        i = (i + 1) % phrases.length;
+        delay = 400;
+      }
+      timer = setTimeout(tick, delay);
+    };
+    timer = setTimeout(tick, 600);
+    return () => clearTimeout(timer);
+  }, [phrases]);
+  return text;
+}
 
 export default function Hero() {
+  const typed = useTypewriter(PHRASES[lang]);
+  // Generated once: the typewriter re-renders this component on every keystroke,
+  // so random values computed inline would make the particles jump each time.
+  const particles = useMemo(
+    () =>
+      [...Array(15)].map(() => ({
+        left: `${Math.random() * 100}%`,
+        top: `${Math.random() * 100}%`,
+        size: Math.random() * 3 + 2,
+        duration: Math.random() * 3 + 2,
+        delay: Math.random() * 2,
+      })),
+    [],
+  );
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background */}
@@ -40,25 +101,13 @@ export default function Hero() {
 
       {/* Floating particles (bolder + faster) */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(15)].map((_, i) => (
+        {particles.map((p, i) => (
           <motion.div
             key={i}
             className="absolute rounded-full bg-lime/50 shadow-[0_0_6px_rgba(126,217,87,0.6)]"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              width: `${Math.random() * 3 + 2}px`,  // randomized size 2–5px
-              height: `${Math.random() * 3 + 2}px`,
-            }}
-            animate={{
-              y: [-30, -140],
-              opacity: [0, 1, 0],
-            }}
-            transition={{
-              duration: Math.random() * 3 + 2, // faster: 2–5s
-              repeat: Infinity,
-              delay: Math.random() * 2,
-            }}
+            style={{ left: p.left, top: p.top, width: `${p.size}px`, height: `${p.size}px` }}
+            animate={{ y: [-30, -140], opacity: [0, 1, 0] }}
+            transition={{ duration: p.duration, repeat: Infinity, delay: p.delay }}
           />
         ))}
       </div>
@@ -72,35 +121,38 @@ export default function Hero() {
         >
           {/* Introduction (on the reading side: right in Arabic, left in English) */}
           <div className="flex-1 min-w-0">
-            {/* Badge */}
-            <div className="inline-flex items-center px-5 py-2.5 bg-white/20 ring-1 ring-inset ring-white/40 backdrop-blur-sm rounded-full text-white text-lg sm:text-xl font-bold mb-8 animate-fadeIn">
-              <span className="w-2 h-2 bg-lime rounded-full me-2 animate-pulse"></span>
-              {t({ ar: 'أهلاً، أنا', en: <>Hi, I<span className="font-[system-ui]">’</span>m</> })}
-            </div>
-
-            {/* Main Headline — extra line-height so Arabic marks (e.g. the shadda) aren't clipped */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6 leading-[1.35] animate-slideUp">
+            {/* Name (desktop) — extra line-height so Arabic marks (e.g. the shadda) aren't clipped.
+                On phones it shows above the portrait instead (see below); only one is ever displayed. */}
+            <h1 className="hidden lg:block text-6xl font-bold text-white mb-6 leading-[1.35] animate-slideUp">
               <span className="inline-block px-3 -mx-3 py-4 -my-4 text-transparent bg-clip-text bg-gradient-to-l from-lime to-bright">
                 {t({ ar: 'أحمد فرج.', en: 'Ahmed Farag.' })}
               </span>
             </h1>
 
-            {/* Subheadline */}
-            <p className="text-lg sm:text-xl text-white/90 max-w-xl mx-auto lg:mx-0 leading-loose animate-slideUp delay-200">
-              {t({
-                ar: 'أبني برامج وأدوات كنت أتمنى تكون موجودة، غالباً بالذكاء الاصطناعي.',
-                en: 'I build the software and tools I wish already existed, usually with AI.',
-              })}
+            {/* Typing line — fixed min-height so the layout doesn't jump while typing */}
+            <p
+              className="text-lg sm:text-xl text-white/90 max-w-xl mx-auto lg:mx-0 leading-loose min-h-[5.5rem] sm:min-h-[6rem] animate-slideUp delay-200"
+              aria-label={PHRASES[lang][0]}
+            >
+              <span aria-hidden="true">{typed}</span>
+              <span
+                aria-hidden="true"
+                className="inline-block w-[2px] h-[1.1em] align-middle bg-lime ms-1 animate-pulse"
+              />
             </p>
           </div>
 
-          {/* Portrait — waist-up, background-removed cutout (from AHMED2.jpg) with a white sticker outline baked in */}
-          <div className="shrink-0 animate-fadeIn">
-            <img
-              src="/ahmed-cutout.png"
-              alt={t({ ar: 'أحمد فرج', en: 'Ahmed Farag' })}
-              className="h-72 sm:h-80 lg:h-[min(65vh,32rem)] w-auto drop-shadow-[0_20px_30px_rgba(0,0,0,0.35)]"
-            />
+          {/* Portrait inside a live automation flow, so the hero is about the work, not only the face */}
+          <div className="w-full lg:w-[30rem] xl:w-[34rem] lg:shrink-0">
+            {/* Name (phones and tablets): sits above the portrait */}
+            <h1 className="lg:hidden text-center text-4xl sm:text-5xl font-bold text-white mb-2 leading-[1.35] animate-slideUp">
+              <span className="inline-block px-3 -mx-3 py-4 -my-4 text-transparent bg-clip-text bg-gradient-to-l from-lime to-bright">
+                {t({ ar: 'أحمد فرج.', en: 'Ahmed Farag.' })}
+              </span>
+            </h1>
+            <div className="animate-fadeIn">
+              <HeroWorkflow src="/ahmed-cutout.png" alt={t({ ar: 'أحمد فرج', en: 'Ahmed Farag' })} />
+            </div>
           </div>
         </div>
       </div>

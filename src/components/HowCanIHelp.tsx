@@ -1,20 +1,57 @@
 import { AppWindow, AudioLines, Workflow, type LucideIcon } from 'lucide-react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
-import { dir, lang, sectionHref, t } from '../i18n';
+import { dir, lang, t } from '../i18n';
+import { pickNeed, talkHref, type Need } from '../lib/consultNeed';
 import Reveal from './Reveal';
 
-type Item = { title: string; description: string; icon: LucideIcon };
+type Item = { title: string; description: string; icon: LucideIcon; ctas: { label: string; need: Need }[] };
 
 const items: Item[] = t<Item[]>({
   ar: [
-    { title: 'أوتوميشن', description: 'لو فيه شغل تعيده كل يوم، أخلّيه يشتغل لحاله.', icon: Workflow },
-    { title: 'أنظمة ذكاء اصطناعي', description: 'لو تبي تستفيد من الذكاء الاصطناعي بس ما تدري من وين تبدأ، أبني لك أدوات جاهزة.', icon: AudioLines },
-    { title: 'تطبيقات وبرامج', description: 'لو ما لقيت برنامج يسوي اللي تحتاجه، أبنيه لك.', icon: AppWindow },
+    {
+      title: 'أوتوميشن',
+      description: 'لو فيه شغل تعيده كل يوم، أخلّيه يشتغل لحاله.',
+      icon: Workflow,
+      ctas: [{ label: 'أبي أتمتة لشغلي بالذكاء الاصطناعي', need: 'automation' }],
+    },
+    {
+      title: 'أنظمة ذكاء اصطناعي',
+      description: 'لو تبي تستفيد من الذكاء الاصطناعي بس ما تدري من وين تبدأ، أبني لك أدوات جاهزة.',
+      icon: AudioLines,
+      ctas: [{ label: 'أبي أداة ذكاء اصطناعي لشغلي', need: 'ai-tool' }],
+    },
+    {
+      title: 'تطبيقات ومواقع',
+      description: 'لو ما لقيت برنامج يسوي اللي تحتاجه، أو تبي موقع لشغلك، أبنيه لك.',
+      icon: AppWindow,
+      ctas: [
+        { label: 'أبي أبني تطبيق', need: 'app' },
+        { label: 'أبي أبني موقع', need: 'website' },
+      ],
+    },
   ],
   en: [
-    { title: 'AI automation', description: 'If you keep doing the same task every day, I make it run on its own.', icon: Workflow },
-    { title: 'AI systems', description: 'If you want to use AI but don’t know where to start, I build you ready-made tools.', icon: AudioLines },
-    { title: 'Apps & software', description: 'If you can’t find software that does what you need, I build it for you.', icon: AppWindow },
+    {
+      title: 'AI automation',
+      description: 'If you keep doing the same task every day, I make it run on its own.',
+      icon: Workflow,
+      ctas: [{ label: 'I want to automate my workflow with AI', need: 'automation' }],
+    },
+    {
+      title: 'AI systems',
+      description: 'If you want to use AI but don’t know where to start, I build you ready-made tools.',
+      icon: AudioLines,
+      ctas: [{ label: 'I want an AI tool for my business', need: 'ai-tool' }],
+    },
+    {
+      title: 'Apps & websites',
+      description: 'If you can’t find software that does what you need, or you need a website, I build it for you.',
+      icon: AppWindow,
+      ctas: [
+        { label: 'I want to build an app', need: 'app' },
+        { label: 'I want to build a website', need: 'website' },
+      ],
+    },
   ],
 });
 
@@ -28,13 +65,19 @@ function Card({ item, delay = 0 }: { item: Item; delay?: number }) {
       </span>
       <h3 className="mb-3 text-2xl sm:text-3xl font-bold text-heading">{item.title}</h3>
       <p className="mb-8 text-lg text-body leading-relaxed">{item.description}</p>
-      <a
-        href={sectionHref('#talk')}
-        className="inline-flex items-center gap-1.5 border-b border-primary/40 pb-0.5 font-semibold text-primary transition-colors hover:border-primary-hover hover:text-primary-hover"
-      >
-        {t({ ar: 'خلّنا نتكلم', en: 'Let’s talk' })}
-        <Arrow className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" />
-      </a>
+      <div className="flex flex-col items-start gap-3">
+        {item.ctas.map((cta) => (
+          <a
+            key={cta.need}
+            href={talkHref(cta.need)}
+            onClick={() => pickNeed(cta.need)}
+            className="group/cta inline-flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2.5 font-semibold text-primary ring-1 ring-inset ring-primary/25 transition-colors hover:bg-primary hover:text-white"
+          >
+            {cta.label}
+            <Arrow className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover/cta:translate-x-0.5 rtl:group-hover/cta:-translate-x-0.5" />
+          </a>
+        ))}
+      </div>
     </Reveal>
   );
 }

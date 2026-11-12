@@ -16,12 +16,10 @@ export default function Header() {
 
   const navLinks = t({
     ar: [
-      { href: '#numbers', label: 'أرقامي' },
       { href: '#work', label: 'شغلي' },
       { href: '#reviews', label: 'وش قالوا عني' },
     ],
     en: [
-      { href: '#numbers', label: 'Numbers' },
       { href: '#work', label: 'Work' },
       { href: '#reviews', label: 'Reviews' },
     ],

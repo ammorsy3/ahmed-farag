@@ -1,7 +1,6 @@
 import React from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
-import WorkNumbers from './components/WorkNumbers';
 import HowCanIHelp from './components/HowCanIHelp';
 import ConsultSection from './components/ConsultCall';
 import SelectedWork from './components/SelectedWork';
@@ -27,7 +26,6 @@ function App() {
     <div className="min-h-screen">
       <Header />
       <Hero />
-      <WorkNumbers />
       <Reviews />
       <HowCanIHelp />
       <SelectedWork />

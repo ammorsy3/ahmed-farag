@@ -11,7 +11,6 @@ const copy = t({
     name: 'أحمد فرج',
     tagline: 'أبني برامج وأدوات كنت أتمنى تكون موجودة، غالباً بالذكاء الاصطناعي.',
     links: [
-      { href: '#numbers', label: 'أرقامي' },
       { href: '#reviews', label: 'وش قالوا عني' },
       { href: '#help', label: 'كيف أقدر أساعدك' },
       { href: '#work', label: 'شغلي' },
@@ -23,7 +22,6 @@ const copy = t({
     name: 'Ahmed Farag',
     tagline: 'I build the software and tools I wish already existed, usually with AI.',
     links: [
-      { href: '#numbers', label: 'Numbers' },
       { href: '#reviews', label: 'Reviews' },
       { href: '#help', label: 'How I can help' },
       { href: '#work', label: 'Work' },

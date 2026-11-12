@@ -1,7 +1,8 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
 import { dir, lang, t } from '../i18n';
 import Reveal from './Reveal';
+import { needFromUrl, needLabels, needs, onNeedPicked, type Need } from '../lib/consultNeed';
 
 // Where the request is sent: an n8n webhook. It receives a JSON POST and must answer 2xx once the
 // message is really handed off. It is a public endpoint (visible in the browser anyway), so it is built
@@ -10,23 +11,31 @@ const WEBHOOK_URL =
   (import.meta.env.VITE_CONSULT_WEBHOOK_URL as string | undefined) ||
   'https://n8n-production-6d8a0.up.railway.app/webhook/ahmed-farag';
 
-type Fields = { name: string; email: string; business: string; problem: string; notes: string };
-type Errors = Partial<Record<'name' | 'email' | 'problem', string>>;
+type Fields = { name: string; email: string; business: string; message: string };
+type Errors = Partial<Record<'name' | 'email' | 'message', string>>;
 type Status = 'idle' | 'sending' | 'sent' | 'error';
 
-const empty: Fields = { name: '', email: '', business: '', problem: '', notes: '' };
+const empty: Fields = { name: '', email: '', business: '', message: '' };
 
 const copy = t({
   ar: {
-    heading: 'عندك مشكلة معيّنة في بالك؟',
+    heading: 'خلّنا نتكلم',
     description:
-      'احكِ لي عن شغلك وإيش اللي مضايقك، ونطلع بأسرع حل عملي يناسبك.',
+      'تبي تأتمت شغلك، أو تستفيد من الذكاء الاصطناعي، أو تبني تطبيق أو موقع؟ احكِ لي باختصار وأرد عليك على إيميلك.',
     button: 'إرسال',
     name: 'الاسم',
-    email: 'إيميل العمل',
+    email: 'الإيميل',
     business: 'نشاطك أو موقعك',
-    problem: 'وش المشكلة اللي تبي تحلها؟',
-    notes: 'فيه شي ثاني لازم أعرفه؟',
+    need: 'وش تحتاج؟',
+    message: 'احكِ لي باختصار',
+    placeholders: {
+      none: 'وش في بالك؟ ولو عندك مثال أو موعد معيّن، اذكره.',
+      automation: 'مثلاً: كل يوم أنسخ الطلبات من الإيميل لشيت يدويًا…',
+      'ai-tool': 'مثلاً: أبي مساعد يرد على أسئلة العملاء من ملفاتنا…',
+      app: 'مثلاً: أبي تطبيق حجوزات لعملائي، ويشتغل على الجوال…',
+      website: 'مثلاً: أبي موقع لنشاطي يعرض خدماتي ويستقبل طلبات…',
+      other: 'وش في بالك؟',
+    },
     optional: 'اختياري',
     requiredBadge: 'إلزامي',
     sending: 'يرسل…',
@@ -38,15 +47,23 @@ const copy = t({
     notConfigured: 'النموذج مو جاهز للإرسال لسه. معلوماتك محفوظة هنا.',
   },
   en: {
-    heading: 'Have a specific problem in mind?',
+    heading: 'Let’s talk',
     description:
-      'Tell me about your business and what’s giving you trouble, and we’ll figure out the quickest practical solution that makes sense for you.',
+      'Want to automate your workflow, put AI to work in your business, or build an app or website? Tell me a bit about it and I’ll get back to you by email.',
     button: 'Send',
     name: 'Name',
-    email: 'Work email',
+    email: 'Email',
     business: 'Business or website',
-    problem: 'What problem are you trying to solve?',
-    notes: 'Anything else I should know?',
+    need: 'What do you need?',
+    message: 'Tell me a bit about it',
+    placeholders: {
+      none: 'What do you have in mind? Any examples or deadlines help.',
+      automation: 'e.g. Every day I copy orders from email into a spreadsheet by hand…',
+      'ai-tool': 'e.g. I want an assistant that answers customer questions from our docs…',
+      app: 'e.g. I need a booking app for my customers that works on phones…',
+      website: 'e.g. I need a site for my business that shows my services and takes enquiries…',
+      other: 'What do you have in mind?',
+    },
     optional: 'optional',
     requiredBadge: 'required',
     sending: 'Sending…',
@@ -95,6 +112,18 @@ export default function ConsultSection() {
 
 function ConsultCall() {
   const [fields, setFields] = useState<Fields>(empty);
+  const [need, setNeed] = useState<Need | ''>(needFromUrl);
+  const messageRef = useRef<HTMLTextAreaElement>(null);
+
+  // A service CTA was clicked: select its need (and leave the visitor's typing alone)
+  useEffect(
+    () =>
+      onNeedPicked((picked) => {
+        setNeed(picked);
+        setStatus((s) => (s === 'sent' ? 'idle' : s));
+      }),
+    [],
+  );
   const [errors, setErrors] = useState<Errors>({});
   const [status, setStatus] = useState<Status>('idle');
   const [failure, setFailure] = useState('');
@@ -110,7 +139,7 @@ function ConsultCall() {
     if (!fields.name.trim()) e.name = copy.required;
     if (!fields.email.trim()) e.email = copy.required;
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email.trim())) e.email = copy.emailInvalid;
-    if (!fields.problem.trim()) e.problem = copy.required;
+    if (!fields.message.trim()) e.message = copy.required;
     return e;
   }
 
@@ -138,8 +167,12 @@ function ConsultCall() {
           name: fields.name.trim(),
           email: fields.email.trim(),
           business: fields.business.trim(),
-          problem: fields.problem.trim(),
-          notes: fields.notes.trim(),
+          // service: what they picked (readable, in their language); serviceId: the stable key
+          service: need ? needLabels[need] : '',
+          serviceId: need,
+          // the n8n flow and confirmation email read the message as `problem`
+          problem: fields.message.trim(),
+          notes: '',
           language: lang,
           sentAt: new Date().toISOString(),
         }),
@@ -147,6 +180,7 @@ function ConsultCall() {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setFields(empty);
+      setNeed('');
       setStatus('sent');
     } catch {
       setFailure(copy.errorText);
@@ -228,24 +262,49 @@ function ConsultCall() {
               <input type="text" name="business" autoComplete="organization" value={fields.business} onChange={set('business')} className={inputClass} />
             </label>
 
-            <label className="block">
-              {label(copy.problem)}
-              <textarea
-                name="problem"
-                rows={5}
-                required
-                value={fields.problem}
-                onChange={set('problem')}
-                aria-invalid={!!errors.problem}
-                aria-describedby={errors.problem ? 'consult-problem-err' : undefined}
-                className={inputClass}
-              />
-              {fieldError(errors.problem, 'consult-problem-err')}
-            </label>
+            <fieldset>
+              <legend className="contents">{label(copy.need, true)}</legend>
+              <div className="flex flex-wrap gap-2">
+                {needs.map((n) => {
+                  const on = need === n;
+                  return (
+                    <button
+                      key={n}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => {
+                        setNeed(on ? '' : n);
+                        if (!on) messageRef.current?.focus();
+                      }}
+                      className={
+                        'rounded-full px-4 py-2 text-sm font-semibold ring-1 ring-inset transition-colors ' +
+                        (on
+                          ? 'bg-primary text-white ring-primary'
+                          : 'bg-white text-heading ring-line-strong hover:ring-primary/50 hover:text-primary')
+                      }
+                    >
+                      {needLabels[n]}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
 
             <label className="block">
-              {label(copy.notes, true)}
-              <textarea name="notes" rows={3} value={fields.notes} onChange={set('notes')} className={inputClass} />
+              {label(copy.message)}
+              <textarea
+                ref={messageRef}
+                name="message"
+                rows={5}
+                required
+                placeholder={copy.placeholders[need || 'none']}
+                value={fields.message}
+                onChange={set('message')}
+                aria-invalid={!!errors.message}
+                aria-describedby={errors.message ? 'consult-message-err' : undefined}
+                className={inputClass}
+              />
+              {fieldError(errors.message, 'consult-message-err')}
             </label>
 
             {status === 'error' && (

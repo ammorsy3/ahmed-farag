@@ -1,7 +1,7 @@
 // What a visitor wants help with. The service CTAs pick one, and the contact form starts with it selected.
 import { href, page, t } from '../i18n';
 
-export const needs = ['automation', 'ai-tool', 'app', 'website', 'other'] as const;
+export const needs = ['automation', 'ai-tool', 'app', 'other'] as const;
 export type Need = (typeof needs)[number];
 
 // Short labels for the choice chips in the form
@@ -9,15 +9,13 @@ export const needLabels: Record<Need, string> = t({
   ar: {
     automation: 'أتمتة شغلي بالذكاء الاصطناعي',
     'ai-tool': 'أداة ذكاء اصطناعي',
-    app: 'تطبيق أو برنامج',
-    website: 'موقع إلكتروني',
+    app: 'تطبيق أو موقع',
     other: 'شي ثاني',
   },
   en: {
     automation: 'Automate my workflow with AI',
     'ai-tool': 'An AI tool',
-    app: 'An app or software',
-    website: 'A website',
+    app: 'An app or website',
     other: 'Something else',
   },
 });
@@ -47,6 +45,8 @@ export function onNeedPicked(cb: (need: Need) => void): () => void {
 
 // A need passed in the address (?need=website), e.g. from a project page or a shared link
 export function needFromUrl(): Need | '' {
-  const v = new URLSearchParams(window.location.search).get('need');
+  const raw = new URLSearchParams(window.location.search).get('need');
+  // 'website' used to be its own choice; old links still land on the merged one
+  const v = raw === 'website' ? 'app' : raw;
   return isNeed(v) ? v : '';
 }

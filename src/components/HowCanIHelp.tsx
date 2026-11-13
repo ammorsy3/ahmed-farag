@@ -24,10 +24,7 @@ const items: Item[] = t<Item[]>({
       title: 'تطبيقات ومواقع',
       description: 'لو ما لقيت برنامج يسوي اللي تحتاجه، أو تبي موقع لشغلك، أبنيه لك.',
       icon: AppWindow,
-      ctas: [
-        { label: 'أبي أبني تطبيق', need: 'app' },
-        { label: 'أبي أبني موقع', need: 'website' },
-      ],
+      ctas: [{ label: 'أبي أبني تطبيق أو موقع', need: 'app' }],
     },
   ],
   en: [
@@ -47,10 +44,7 @@ const items: Item[] = t<Item[]>({
       title: 'Apps & websites',
       description: 'If you can’t find software that does what you need, or you need a website, I build it for you.',
       icon: AppWindow,
-      ctas: [
-        { label: 'I want to build an app', need: 'app' },
-        { label: 'I want to build a website', need: 'website' },
-      ],
+      ctas: [{ label: 'I want to build an app or website', need: 'app' }],
     },
   ],
 });

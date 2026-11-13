@@ -1,8 +1,8 @@
-import type { ComponentPropsWithoutRef } from "react"
+import type { ComponentPropsWithoutRef, ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
 
-interface MarqueeProps extends ComponentPropsWithoutRef<"div"> {
+interface MarqueeProps extends Omit<ComponentPropsWithoutRef<"div">, "children"> {
   /** Reverse the scroll direction */
   reverse?: boolean
   /** Pause the animation while hovered */
@@ -11,6 +11,8 @@ interface MarqueeProps extends ComponentPropsWithoutRef<"div"> {
   vertical?: boolean
   /** How many times the children are repeated to fill the track */
   repeat?: number
+  /** The track content. A function gets `isCopy` (true for the visual repeats) so links in them can leave the tab order */
+  children?: ReactNode | ((isCopy: boolean) => ReactNode)
 }
 
 export function Marquee({
@@ -34,8 +36,9 @@ export function Marquee({
       {Array.from({ length: repeat }, (_, i) => (
         <div
           key={i}
-          // Only the first copy is exposed to assistive tech and the keyboard; the rest are visual repeats
-          {...(i > 0 ? ({ "aria-hidden": true, inert: "" } as object) : {})}
+          // Only the first copy is exposed to assistive tech; the rest are visual repeats.
+          // Not `inert`: that also blocks clicks, and the repeats are what is on screen most of the time.
+          aria-hidden={i > 0 || undefined}
           className={cn(
             "flex shrink-0 justify-around [gap:var(--gap)] motion-reduce:[animation-play-state:paused]",
             vertical ? "animate-marquee-vertical flex-col" : "animate-marquee flex-row",
@@ -43,7 +46,7 @@ export function Marquee({
             reverse && "[animation-direction:reverse]",
           )}
         >
-          {children}
+          {typeof children === "function" ? children(i > 0) : children}
         </div>
       ))}
     </div>

@@ -25,7 +25,7 @@ export type MarqueeReview = {
 // An Arabic review reads right-to-left, an English one left-to-right
 const hasArabic = (text: string) => /[؀-ۿ]/.test(text);
 
-const ReviewCard = ({ profile, name, meta, body, rating, ratingLabel, url, linkLabel, linkDir }: MarqueeReview) => {
+const ReviewCard = ({ profile, name, meta, body, rating, ratingLabel, url, linkLabel, linkDir, isCopy }: MarqueeReview & { isCopy?: boolean }) => {
   return (
     <Card
       dir={hasArabic(body) ? "rtl" : "ltr"}
@@ -64,6 +64,8 @@ const ReviewCard = ({ profile, name, meta, body, rating, ratingLabel, url, linkL
               href={url}
               target="_blank"
               rel="noopener noreferrer"
+              // Visual repeat: still clickable, but skipped by the keyboard (its twin in the first copy is reachable)
+              tabIndex={isCopy ? -1 : undefined}
               className="text-sm text-primary transition-colors duration-200 hover:text-primary-hover"
             >
               {linkLabel}
@@ -85,15 +87,11 @@ export default function TestimonialMarquee({ reviews }: { reviews: MarqueeReview
     // dir="ltr": the scrolling track must always run left-to-right, even on the Arabic page
     <div dir="ltr" className="relative flex w-full flex-col items-center justify-center overflow-hidden">
       <Marquee pauseOnHover className="[--duration:45s]">
-        {firstRow.map((review) => (
-          <ReviewCard key={review.name} {...review} />
-        ))}
+        {(isCopy) => firstRow.map((review) => <ReviewCard key={review.name} {...review} isCopy={isCopy} />)}
       </Marquee>
       {secondRow.length > 0 && (
         <Marquee reverse pauseOnHover className="[--duration:45s]">
-          {secondRow.map((review) => (
-            <ReviewCard key={review.name} {...review} />
-          ))}
+          {(isCopy) => secondRow.map((review) => <ReviewCard key={review.name} {...review} isCopy={isCopy} />)}
         </Marquee>
       )}
       <div className="pointer-events-none absolute inset-y-0 left-0 w-1/6 bg-gradient-to-r from-background" />

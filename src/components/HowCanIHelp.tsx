@@ -65,7 +65,7 @@ function Card({ item, delay = 0 }: { item: Item; delay?: number }) {
             key={cta.need}
             href={talkHref(cta.need)}
             onClick={() => pickNeed(cta.need)}
-            className="group/cta inline-flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2.5 font-semibold text-primary ring-1 ring-inset ring-primary/25 transition-colors hover:bg-primary hover:text-white"
+            className="group/cta inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-semibold text-white transition-all duration-200 hover:bg-primary-hover hover:shadow-lg"
           >
             {cta.label}
             <Arrow className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover/cta:translate-x-0.5 rtl:group-hover/cta:-translate-x-0.5" />

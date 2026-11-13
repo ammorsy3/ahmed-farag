@@ -11,11 +11,11 @@ const WEBHOOK_URL =
   (import.meta.env.VITE_CONSULT_WEBHOOK_URL as string | undefined) ||
   'https://n8n-production-6d8a0.up.railway.app/webhook/ahmed-farag';
 
-type Fields = { name: string; email: string; business: string; message: string };
-type Errors = Partial<Record<'name' | 'email' | 'message', string>>;
+type Fields = { name: string; email: string; phone: string; business: string; message: string };
+type Errors = Partial<Record<'name' | 'email' | 'phone' | 'message', string>>;
 type Status = 'idle' | 'sending' | 'sent' | 'error';
 
-const empty: Fields = { name: '', email: '', business: '', message: '' };
+const empty: Fields = { name: '', email: '', phone: '', business: '', message: '' };
 
 const copy = t({
   ar: {
@@ -25,6 +25,7 @@ const copy = t({
     button: 'إرسال',
     name: 'الاسم',
     email: 'الإيميل',
+    phone: 'رقم الجوال',
     business: 'اسم شركتك أو موقعها',
     need: 'وش تحتاج؟',
     message: 'احكِ لي باختصار',
@@ -40,6 +41,7 @@ const copy = t({
     sending: 'يرسل…',
     required: 'هذا الحقل مطلوب.',
     emailInvalid: 'اكتب إيميل صحيح.',
+    phoneInvalid: 'اكتب رقم جوال صحيح.',
     sentTitle: 'وصلني طلبك',
     sentText: 'بقرأ اللي كتبته وأرد عليك على إيميلك.',
     errorText: 'ما انرسل طلبك. معلوماتك محفوظة هنا، جرّب مرة ثانية.',
@@ -52,6 +54,7 @@ const copy = t({
     button: 'Send',
     name: 'Name',
     email: 'Email',
+    phone: 'Phone number',
     business: 'Company name or website',
     need: 'What do you need?',
     message: 'Tell me a bit about it',
@@ -67,6 +70,7 @@ const copy = t({
     sending: 'Sending…',
     required: 'This field is required.',
     emailInvalid: 'Enter a valid email address.',
+    phoneInvalid: 'Enter a valid phone number.',
     sentTitle: 'Got it, thanks',
     sentText: 'I’ll read what you wrote and reply by email.',
     errorText: 'Your request didn’t send. What you wrote is still here, so try again.',
@@ -137,6 +141,10 @@ function ConsultCall() {
     if (!fields.name.trim()) e.name = copy.required;
     if (!fields.email.trim()) e.email = copy.required;
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email.trim())) e.email = copy.emailInvalid;
+    // Required, and should look like a number: 7–15 digits, with +, spaces, dashes or brackets
+    const phone = fields.phone.trim();
+    if (!phone) e.phone = copy.required;
+    else if (!/^\+?[\d\s()-]+$/.test(phone) || !/^\d{7,15}$/.test(phone.replace(/\D/g, ''))) e.phone = copy.phoneInvalid;
     if (!fields.message.trim()) e.message = copy.required;
     return e;
   }
@@ -164,6 +172,7 @@ function ConsultCall() {
         body: JSON.stringify({
           name: fields.name.trim(),
           email: fields.email.trim(),
+          phone: fields.phone.trim(),
           business: fields.business.trim(),
           // service: what they picked (readable, in their language); serviceId: the stable key
           service: need ? needLabels[need] : '',
@@ -255,10 +264,29 @@ function ConsultCall() {
               </label>
             </div>
 
-            <label className="block">
-              {label(copy.business, true)}
-              <input type="text" name="business" autoComplete="organization" value={fields.business} onChange={set('business')} className={inputClass} />
-            </label>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <label className="block">
+                {label(copy.phone)}
+                <input
+                  type="tel"
+                  name="phone"
+                  dir="ltr"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  required
+                  value={fields.phone}
+                  onChange={set('phone')}
+                  aria-invalid={!!errors.phone}
+                  aria-describedby={errors.phone ? 'consult-phone-err' : undefined}
+                  className={inputClass}
+                />
+                {fieldError(errors.phone, 'consult-phone-err')}
+              </label>
+              <label className="block">
+                {label(copy.business, true)}
+                <input type="text" name="business" autoComplete="organization" value={fields.business} onChange={set('business')} className={inputClass} />
+              </label>
+            </div>
 
             <fieldset>
               <legend className="contents">{label(copy.need, true)}</legend>

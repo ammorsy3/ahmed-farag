@@ -31,10 +31,20 @@ ${f('Inter-800.woff2', 'Inter', '700 900', '')}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:#fff;width:1080px;margin:0}
 body{font-family:'Fatimah Arabic','Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;font-feature-settings:"kern"}
+.sw{width:1080px;height:1350px;break-after:page;page-break-after:always}
+.sw:last-child{break-after:auto;page-break-after:auto}
 .slide{position:relative;width:1080px;height:1350px;overflow:hidden;background:var(--bg);color:var(--fg);
-  padding:var(--pad-top) var(--pad-x) var(--foot-h);display:flex;flex-direction:column;break-after:page;page-break-after:always}
-.slide:last-child{break-after:auto;page-break-after:auto}
+  padding:var(--pad-top) var(--pad-x) var(--foot-h);display:flex;flex-direction:column}
 .slide > *{position:relative;z-index:1}
+
+/* shared switches (slide options): progress bar, big background number, window dots */
+.slide > .x-progress{position:absolute;z-index:3;top:0;left:0;right:0;height:12px;background:rgba(127,140,132,.18);background:color-mix(in srgb,var(--fg) 9%,transparent)}
+.x-progress i{position:absolute;top:0;right:0;bottom:0;background:var(--accent);border-radius:0 0 0 12px}
+.slide > .x-bignum{position:absolute;z-index:0;left:56px;bottom:118px;font-family:'Inter',sans-serif;font-weight:800;font-size:480px;
+  line-height:.8;letter-spacing:-.05em;direction:ltr;color:var(--fg);opacity:.055;pointer-events:none}
+.slide > .x-dots{position:absolute;z-index:2;top:58px;left:var(--pad-x);display:flex;gap:12px;direction:ltr}
+.x-dots i{width:18px;height:18px;border-radius:50%;background:#FF5F57}
+.x-dots i:nth-child(2){background:#FEBC2E}.x-dots i:nth-child(3){background:#28C840}
 mark{background:none;color:var(--accent)}
 .en,.num{font-family:'Inter',sans-serif;direction:ltr;unicode-bidi:isolate}
 

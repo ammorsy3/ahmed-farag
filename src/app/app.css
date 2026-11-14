@@ -324,3 +324,54 @@
   .li-app *, .li-app *::before, .li-app *::after { transition: none !important; }
   .li-app .li-review { animation: none; }
 }
+
+/* ---------- carousel design (whole carousel + one slide) ---------- */
+.li-app .design-box { width: 100%; padding: 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); display: grid; gap: 6px; }
+.li-app .li-visual .design-box { max-width: 400px; }
+.li-app .slide-design { background: #fff; }
+.li-app .design-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 0 2px 6px; font-size: 15px; }
+.li-app .design-head .link-btn { min-height: 32px; padding: 4px 0; font-size: 13px; }
+.li-app .design-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 48px; padding: 8px 12px;
+  border: 0; border-radius: 12px; background: transparent; color: var(--heading); text-align: start; font-size: 15px;
+}
+.li-app .design-row:hover { background: rgb(31 154 46 / 0.06); }
+.li-app .design-label { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; }
+.li-app .design-label small { flex-basis: 100%; font-size: 12px; color: var(--muted); }
+.li-app .design-own { font-style: normal; font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--mint); color: var(--primary-hover); }
+.li-app .switch { flex: none; width: 44px; height: 26px; border-radius: 999px; background: var(--line-strong); position: relative; transition: background 0.15s; }
+.li-app .switch i { position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / 0.2); transition: transform 0.15s; }
+.li-app .design-row.on .switch { background: var(--primary); }
+.li-app .design-row.on .switch i { transform: translateX(-18px); }
+.li-app .design-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 4px 2px 8px; }
+.li-app .design-chips .muted { min-width: 44px; }
+
+/* ---------- LinkedIn feed preview ("…more") ---------- */
+.li-app .feed-preview { position: relative; overflow: hidden; padding: 14px; border-radius: 18px; background: #f4f2ee; border: 1px solid #e6e2da; display: grid; gap: 10px; }
+.li-app .feed-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 15px; }
+.li-app .seg-mini { display: inline-flex; padding: 3px; border-radius: 999px; background: #fff; border: 1px solid #e0dcd4; }
+.li-app .seg-mini button { border: 0; background: none; border-radius: 999px; padding: 5px 12px; min-height: 32px; font-size: 13px; color: var(--body); }
+.li-app .seg-mini button.on { background: var(--heading); color: #fff; }
+.li-app .feed-hook { margin: 0; font-size: 13px; color: var(--body); }
+.li-app .feed-hook b { color: var(--heading); font-variant-numeric: tabular-nums; }
+.li-app .feed-hook.all { color: var(--primary-hover); }
+.li-app .feed-frame { overflow: hidden; }
+.li-app .feed-card {
+  transform-origin: top right; background: #fff; border-radius: 10px; border: 1px solid #e0dcd4; padding: 12px 16px 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Arabic', 'Helvetica Neue', sans-serif; color: rgb(0 0 0 / 0.9);
+}
+.li-app .feed-head { display: flex; gap: 8px; align-items: flex-start; direction: ltr; margin-bottom: 8px; }
+.li-app .feed-av { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; object-position: top; flex: none; }
+.li-app .feed-who { display: flex; flex-direction: column; min-width: 0; font-size: 12px; line-height: 16px; color: rgb(0 0 0 / 0.6); }
+.li-app .feed-who b { font-size: 14px; line-height: 20px; color: rgb(0 0 0 / 0.9); font-weight: 600; }
+.li-app .feed-who span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.li-app .feed-text {
+  font-family: inherit; font-size: 14px; line-height: 20px; white-space: pre-wrap; overflow-wrap: break-word; unicode-bidi: plaintext; text-align: start;
+}
+.li-app .feed-more, .li-app .feed-less { border: 0; background: none; padding: 0; margin: 0; font: inherit; color: rgb(0 0 0 / 0.6); cursor: pointer; }
+.li-app .feed-more:hover, .li-app .feed-less:hover { color: #0a66c2; text-decoration: underline; }
+.li-app .feed-less { display: block; margin-top: 4px; font-size: 13px; }
+.li-app .feed-media { margin: 10px -16px 0; border-top: 1px solid #ebe8e2; }
+.li-app .feed-doc { padding: 8px 16px; font-size: 13px; font-weight: 600; background: #f8f7f5; border-bottom: 1px solid #ebe8e2; }
+.li-app .feed-media .slide-preview { border-radius: 0; }
+.li-app .feed-probe { position: absolute; top: 0; right: 0; visibility: hidden; pointer-events: none; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Arabic', 'Helvetica Neue', sans-serif; }

@@ -2,7 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-import { href, lang, t } from './i18n';
+import { href, lang, page, t } from './i18n';
 
 document.documentElement.lang = lang;
 document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
@@ -36,6 +36,12 @@ setMeta('meta[property="og:locale"]', 'property', 'og:locale', lang === 'ar' ? '
 setMeta('meta[name="twitter:title"]', 'name', 'twitter:title', title);
 setMeta('meta[name="twitter:description"]', 'name', 'twitter:description', description);
 document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.setAttribute('href', url);
+
+// /app is private: never index it and drop the public page's canonical/language links
+if (page === '/app') {
+  setMeta('meta[name="robots"]', 'name', 'robots', 'noindex, nofollow');
+  document.head.querySelectorAll('link[rel="canonical"], link[rel="alternate"]').forEach((el) => el.remove());
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

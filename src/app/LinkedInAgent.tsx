@@ -98,6 +98,9 @@ async function callAgent<T>(body: Record<string, unknown>, signal?: AbortSignal)
     if (code === 'response_too_large') throw new Error('رد n8n أكبر من حد Vercel (٤٫٥ MB)، فما وصل. الملف كبير زيادة.');
     if (code === 'n8n_timeout') throw new Error('n8n طوّل أكثر من ٥ دقايق. جرّب مرة ثانية.');
     if (code === 'not_configured') throw new Error('متغيرات البيئة ناقصة في Vercel (LINKEDIN_WEBHOOK_URL / LINKEDIN_WEBHOOK_SECRET).');
+    if (code === 'n8n_rejected_key') throw new Error('n8n رفض المفتاح (403): قيمة LINKEDIN_WEBHOOK_SECRET في Vercel ما تطابق credential «LinkedIn agent key» في n8n.');
+    if (code === 'n8n_not_found') throw new Error('n8n ما لقى الـwebhook (404): تأكد من LINKEDIN_WEBHOOK_URL في Vercel وإن الـworkflow منشور.');
+    if (code === 'n8n_unreachable') throw new Error('ما قدرنا نوصل لـn8n: تأكد من LINKEDIN_WEBHOOK_URL في Vercel.');
     throw new Error(`رد الوكيل بخطأ ${res.status}: ${text.slice(0, 300)}`);
   }
   try {
@@ -130,6 +133,7 @@ const plain = (v: unknown) => String(v ?? '').replace(/==/g, '');
 export default function LinkedInAgent() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [templatesState, setTemplatesState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [templatesError, setTemplatesError] = useState('');
 
   const [idea, setIdea] = useState('');
   const [postType, setPostType] = useState<PostType>('carousel');
@@ -180,7 +184,8 @@ export default function LinkedInAgent() {
       const list = (Array.isArray(rows) ? rows : []).filter((r) => r && r.template_id).map(toTemplate);
       setTemplates(list);
       setTemplatesState('ready');
-    } catch {
+    } catch (err) {
+      setTemplatesError((err as Error).message);
       setTemplatesState('error');
     }
   }
@@ -430,7 +435,12 @@ export default function LinkedInAgent() {
         </span>
       </div>
 
-      {templatesState === 'error' && <p className="notice">ما قدرنا نجيب القوالب. تأكد إن الـworkflow شغّال في n8n.</p>}
+      {templatesState === 'error' && (
+        <p className="notice">
+          ما قدرنا نجيب القوالب.
+          {templatesError && <span className="notice-detail">{templatesError}</span>}
+        </p>
+      )}
 
       <form className="well" onSubmit={generate}>
         <label className="label" htmlFor="idea">فكرة المنشور</label>

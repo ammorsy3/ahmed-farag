@@ -14,8 +14,9 @@ export async function POST(req: Request) {
   if (!hasSession(req)) return json(401, { error: 'signed_out' });
   if (!sameOrigin(req)) return json(403, { error: 'bad_origin' });
 
-  const url = process.env.LINKEDIN_WEBHOOK_URL;
-  const key = process.env.LINKEDIN_WEBHOOK_SECRET;
+  // trim: a pasted value often carries a stray space or new line
+  const url = process.env.LINKEDIN_WEBHOOK_URL?.trim();
+  const key = process.env.LINKEDIN_WEBHOOK_SECRET?.trim();
   if (!url || !key) return json(500, { error: 'not_configured', message: 'LINKEDIN_WEBHOOK_URL / LINKEDIN_WEBHOOK_SECRET are missing' });
 
   const body = await req.text();
@@ -37,7 +38,14 @@ export async function POST(req: Request) {
     });
   } catch (e) {
     const timedOut = (e as Error).name === 'TimeoutError';
+    console.error(`[linkedin] ${action}: n8n ${timedOut ? 'timed out' : 'unreachable'}`, (e as Error).message);
     return json(504, { error: timedOut ? 'n8n_timeout' : 'n8n_unreachable' });
+  }
+
+  // Header Auth failures (wrong/missing key) and a wrong URL get a clear code; they never show in n8n's executions
+  if (res.status === 401 || res.status === 403 || res.status === 404) {
+    console.error(`[linkedin] ${action}: n8n answered ${res.status}`);
+    return json(502, { error: res.status === 404 ? 'n8n_not_found' : 'n8n_rejected_key', status: res.status });
   }
 
   const text = await res.text();

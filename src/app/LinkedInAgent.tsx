@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { renderDoc, check, limitsFor } from './linkedin-templates/engine.js';
+import { renderDoc, check, limitsFor, slideKey, slideTemplate, type SlideData, type OptionDef } from './linkedin-templates/engine.js';
+import { applyRhythm, clearRhythm, type Opts } from './design';
+import { CarouselDesign, SlideDesign } from './CarouselDesign';
+import LinkedInFeedPreview from './LinkedInFeedPreview';
 import { brandCss, AUTHOR } from './linkedin-templates/brand.js';
 import fatimahRegular from './linkedin-templates/fonts/FatimahArabic-Regular.woff?url';
 import fatimahHeavy from './linkedin-templates/fonts/FatimahArabic-Heavy.woff?url';
@@ -15,9 +18,13 @@ import inter800 from './linkedin-templates/fonts/Inter-800.woff2?url';
 // Nothing reaches LinkedIn until the publish button is pressed.
 
 type PostType = 'text' | 'image' | 'carousel';
-type Slide = { type: string; [field: string]: string | string[] | undefined };
-type Template = { id: string; name: string; nameAr: string; kind: 'carousel' | 'image'; css: string; slides: Record<string, string>; limits: Record<string, number> };
-type TemplateRow = { template_id: string; name: string; name_ar: string; kind: 'carousel' | 'image'; css: string; slides_json: string; limits_json: string };
+// a slide may also carry tpl (another template), variant (layout) and o (its own design switches)
+type Slide = SlideData;
+type Template = {
+  id: string; name: string; nameAr: string; kind: 'carousel' | 'image'; css: string; slides: Record<string, string>; limits: Record<string, number>;
+  options: OptionDef[]; variants: Record<string, string>; variantLimits: Record<string, Record<string, number>>; ownDots: boolean | string[];
+};
+type TemplateRow = { template_id: string; name: string; name_ar: string; kind: 'carousel' | 'image'; css: string; slides_json: string; limits_json: string; options_json?: string };
 type Draft = { post_text: string; doc_title: string; image_brief: string; template_id: string; slides: Slide[]; issues: string[] };
 type Rendered = { file_b64: string; mime: string; kind: string; slide_count: number; issues: string[]; bytes: number };
 type HistoryRow = { ref?: string; post_type?: string; template_id?: string; idea?: string; post_text?: string; status?: string; post_url?: string; scheduled_at?: string; createdAt?: string };
@@ -114,7 +121,11 @@ async function callAgent<T>(body: Record<string, unknown>, signal?: AbortSignal)
 }
 
 function toTemplate(r: TemplateRow): Template {
-  return { id: r.template_id, name: r.name, nameAr: r.name_ar, kind: r.kind, css: r.css, slides: JSON.parse(r.slides_json), limits: JSON.parse(r.limits_json || '{}') };
+  const extra = JSON.parse(r.options_json || '{}');
+  return {
+    id: r.template_id, name: r.name, nameAr: r.name_ar, kind: r.kind, css: r.css, slides: JSON.parse(r.slides_json), limits: JSON.parse(r.limits_json || '{}'),
+    options: extra.options || [], variants: extra.variants || {}, variantLimits: extra.variantLimits || {}, ownDots: extra.ownDots || false,
+  };
 }
 
 function elapsed(ms: number) {
@@ -128,6 +139,9 @@ function localInput(minutesFromNow: number) {
   d.setSeconds(0, 0);
   return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 }
+
+// slide types a template offers (layout variants like 'step~big' aren't types)
+const slideTypes = (t: Template) => Object.keys(t.slides).filter((k) => !k.includes('~'));
 
 const plain = (v: unknown) => String(v ?? '').replace(/==/g, '');
 
@@ -154,6 +168,9 @@ export default function LinkedInAgent() {
   const [imageBrief, setImageBrief] = useState('');
   const [slides, setSlides] = useState<Slide[]>([]);
   const [selected, setSelected] = useState(0);
+  // carousel-wide design switches (dots, progress bar, big numbers…) and "auto rhythm" (mix looks per slide)
+  const [docOpts, setDocOpts] = useState<Opts>({});
+  const [rhythm, setRhythm] = useState(true);
 
   const [rendered, setRendered] = useState<(Rendered & { key: string }) | null>(null);
   const [scheduleOn, setScheduleOn] = useState(false);
@@ -206,6 +223,8 @@ export default function LinkedInAgent() {
 
   const kindTemplates = templates.filter((t) => (postType === 'carousel' ? t.kind === 'carousel' : postType === 'image' ? t.kind === 'image' : false));
   const template = templates.find((t) => t.id === draftTpl) || null;
+  const byId = useMemo(() => Object.fromEntries(templates.map((t) => [t.id, t])), [templates]);
+  const carousels = templates.filter((t) => t.kind === 'carousel');
   // templates the open post can switch to: same kind, and every slide type it uses exists there
   const draftTemplates = templates.filter((t) => t.kind === (draftType === 'carousel' ? 'carousel' : 'image') && slides.every((sl) => sl.type in t.slides));
 
@@ -238,7 +257,8 @@ export default function LinkedInAgent() {
     setPostText(d.post_text || '');
     setDocTitle(d.doc_title || '');
     setImageBrief(d.image_brief || '');
-    setSlides(Array.isArray(d.slides) ? d.slides : []);
+    const drafted = Array.isArray(d.slides) ? d.slides : [];
+    setSlides(type === 'carousel' && rhythm ? applyRhythm(drafted, tpl, byId) : drafted);
     setSelected(0);
     setRendered(null);
     return d;
@@ -311,13 +331,13 @@ export default function LinkedInAgent() {
   }
 
   // what the file would contain right now; a render is only reused while this stays the same
-  const contentKey = JSON.stringify([draftTpl, slides]);
-  const issues: string[] = useMemo(() => (template && slides.length ? check(template, { slides }) : []), [template, slides]);
+  const contentKey = JSON.stringify([draftTpl, slides, docOpts]);
+  const issues: string[] = useMemo(() => (template && slides.length ? check(template, { slides }, byId) : []), [template, slides, byId]);
   const fileReady = !!rendered && rendered.key === contentKey;
 
   async function render(): Promise<Rendered> {
     if (fileReady && rendered) return rendered;
-    const r = await step('render', () => callAgent<Rendered>({ action: 'render', template_id: draftTpl, slides }));
+    const r = await step('render', () => callAgent<Rendered>({ action: 'render', template_id: draftTpl, slides, opts: docOpts }));
     if (!r.file_b64) throw new Error('ما رجع ملف من Gotenberg.');
     setRendered({ ...r, key: contentKey });
     return r;
@@ -362,6 +382,7 @@ export default function LinkedInAgent() {
           idea: topic.current,
           // the picture travels inside the file already; keep history rows small
           slides: slides.map(({ image_url, ...s }) => s),
+          opts: docOpts,
           file_b64: file?.file_b64 || '',
           mime: file?.mime || '',
           schedule_at: scheduleOn ? scheduleDate.toISOString() : '',
@@ -408,6 +429,14 @@ export default function LinkedInAgent() {
     setSlides((list) => list.filter((_, j) => j !== i));
     setSelected((s) => Math.max(0, Math.min(s, slides.length - 2)));
   }
+  function switchTemplate(id: string) {
+    setDraftTpl(id);
+    if (rhythm && draftType === 'carousel') setSlides((list) => applyRhythm(list, id, byId));
+  }
+  function toggleRhythm(on: boolean) {
+    setRhythm(on);
+    setSlides((list) => (on ? applyRhythm(list, draftTpl, byId) : clearRhythm(list)));
+  }
   function addSlide(type: string) {
     const at = Math.min(selected + 1, slides.length);
     setSlides((list) => [...list.slice(0, at), { type, title: '' }, ...list.slice(at)]);
@@ -424,9 +453,10 @@ export default function LinkedInAgent() {
   const statusClass = phase === 'working' || phase === 'publishing' || busy ? 'running' : phase === 'idle' ? (error ? 'error' : 'idle') : 'done';
   const showSteps = Object.keys(steps).length > 0;
   const editable = phase === 'review' && !busy;
-  const limits = limitsFor(template);
   const stageWidth = useStageWidth();
   const current = slides[selected];
+  const currentTpl = template && current ? slideTemplate(template, current, byId) : template;
+  const limits = limitsFor(currentTpl, currentTpl && current ? slideKey(currentTpl, current) : undefined);
 
   return (
     <section className={`device content li ${phase === 'idle' ? '' : 'wide'}`} dir="rtl" lang="ar">
@@ -564,7 +594,7 @@ export default function LinkedInAgent() {
             <div className="li-visual">
               <div className="li-stage">
                 {slides.length > 0 ? (
-                  <SlidePreview template={template} slides={slides} index={Math.min(selected, slides.length - 1)} width={stageWidth} />
+                  <SlidePreview template={template} slides={slides} index={Math.min(selected, slides.length - 1)} width={stageWidth} byId={byId} opts={docOpts} />
                 ) : (
                   <div className="li-stage-empty">ما فيه شرائح</div>
                 )}
@@ -580,7 +610,7 @@ export default function LinkedInAgent() {
                 <div className="thumbs">
                   {slides.map((_s, i) => (
                     <button key={i} type="button" className={`thumb ${i === selected ? 'on' : ''}`} onClick={() => setSelected(i)} aria-label={`الشريحة ${i + 1}`}>
-                      <SlidePreview template={template} slides={slides} index={i} width={64} />
+                      <SlidePreview template={template} slides={slides} index={i} width={64} byId={byId} opts={docOpts} />
                       <span>{i + 1}</span>
                     </button>
                   ))}
@@ -597,11 +627,15 @@ export default function LinkedInAgent() {
                 <div className="li-switch">
                   <span className="muted small-text">غيّر القالب:</span>
                   {draftTemplates.map((t) => (
-                    <button key={t.id} type="button" className={`chip-btn ${t.id === draftTpl ? 'on' : ''}`} onClick={() => setDraftTpl(t.id)}>
+                    <button key={t.id} type="button" className={`chip-btn ${t.id === draftTpl ? 'on' : ''}`} onClick={() => switchTemplate(t.id)}>
                       {t.nameAr}
                     </button>
                   ))}
                 </div>
+              )}
+
+              {editable && template.kind === 'carousel' && (
+                <CarouselDesign template={template} docOpts={docOpts} onDocOpts={setDocOpts} rhythm={rhythm} onRhythm={toggleRhythm} />
               )}
             </div>
           )}
@@ -625,12 +659,23 @@ export default function LinkedInAgent() {
                 {template.kind === 'carousel' && editable && (
                   <label className="field">
                     نوع الشريحة
-                    <select value={current.type} onChange={(e) => updateSlide(selected, { type: e.target.value })}>
-                      {Object.keys(template.slides).map((t) => (
+                    <select value={current.type} onChange={(e) => updateSlide(selected, { type: e.target.value, variant: undefined })}>
+                      {slideTypes(template).map((t) => (
                         <option key={t} value={t}>{SLIDE_NAMES[t] || t}</option>
                       ))}
                     </select>
                   </label>
+                )}
+
+                {template.kind === 'carousel' && editable && (
+                  <SlideDesign
+                    slide={current}
+                    docTemplate={template}
+                    carousels={carousels}
+                    byId={byId}
+                    docOpts={docOpts}
+                    onChange={(patch) => updateSlide(selected, patch)}
+                  />
                 )}
 
                 {(FIELDS[current.type] || []).map((f) => {
@@ -669,7 +714,7 @@ export default function LinkedInAgent() {
                 {template.kind === 'carousel' && editable && (
                   <div className="add-slide">
                     <span className="muted small-text">أضف شريحة بعدها:</span>
-                    {Object.keys(template.slides).map((t) => (
+                    {slideTypes(template).map((t) => (
                       <button key={t} type="button" className="chip-btn" onClick={() => addSlide(t)} disabled={slides.length >= 12}>
                         + {SLIDE_NAMES[t] || t}
                       </button>
@@ -685,6 +730,19 @@ export default function LinkedInAgent() {
                   </ul>
                 )}
               </div>
+            )}
+
+            {busy !== 'draft' && postText.trim() && (
+              <LinkedInFeedPreview
+                text={postText}
+                docTitle={draftType === 'carousel' ? docTitle || 'Ahmed Farag' : undefined}
+                pages={draftType === 'carousel' ? slides.length : undefined}
+                media={
+                  needsFile && template && slides.length
+                    ? (w) => <SlidePreview template={template} slides={slides} index={0} width={w} byId={byId} opts={docOpts} />
+                    : undefined
+                }
+              />
             )}
 
             <article className="post-card linkedin">
@@ -704,7 +762,7 @@ export default function LinkedInAgent() {
                 <>
                   <textarea className="caption-edit" dir="auto" value={postText} onChange={(e) => setPostText(e.target.value)} rows={9} disabled={!editable} />
                   <div className={`caption-count ${postText.length > CAPTION_MAX ? 'over' : ''}`}>
-                    <span>أول ٢٠٠ حرف تبان قبل «المزيد»</span>
+                    <span>شوف فوق وين ينقطع النص عند «more»</span>
                     <span dir="ltr">{postText.length}/{CAPTION_MAX}</span>
                   </div>
                 </>
@@ -842,12 +900,26 @@ function sampleSlide(t: Template): Slide {
 }
 
 // Renders one slide of the real template in a scaled iframe (same engine and fonts as n8n)
-function SlidePreview({ template, slides, index, width }: { template: Template; slides: Slide[]; index: number; width: number }) {
+function SlidePreview({
+  template,
+  slides,
+  index,
+  width,
+  byId,
+  opts,
+}: {
+  template: Template;
+  slides: Slide[];
+  index: number;
+  width: number;
+  byId?: Record<string, Template>;
+  opts?: Opts;
+}) {
   const html = useMemo(() => {
-    const doc: string = renderDoc(template, { author: AUTHOR, slides }, BRAND_CSS);
-    const only = `<style>html,body{overflow:hidden!important}.slide:not(:nth-of-type(${index + 1})){display:none!important}</style>`;
+    const doc: string = renderDoc(template, { author: AUTHOR, slides, opts }, BRAND_CSS, byId);
+    const only = `<style>html,body{overflow:hidden!important}.sw:not(:nth-of-type(${index + 1})){display:none!important}</style>`;
     return doc.replace('</head>', `${only}</head>`);
-  }, [template, slides, index]);
+  }, [template, slides, index, byId, opts]);
   const scale = width / 1080;
   return (
     <div className="slide-preview" style={{ width, height: 1350 * scale }}>

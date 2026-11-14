@@ -63,15 +63,46 @@ const lenClass = (s) => {
   return n <= 28 ? 's' : n <= 46 ? 'm' : 'l';
 };
 
-// A template can tighten limits for its layout, e.g. limits: { bullets: 4 }
-export const limitsFor = (template) => ({ ...LIMITS, ...(template && template.limits) });
+// A template can tighten limits for its layout, e.g. limits: { bullets: 4 },
+// and a layout variant can tighten them further: variantLimits: { 'bullets~grid': { bullets: 4 } }
+export const limitsFor = (template, key) => ({
+  ...LIMITS,
+  ...(template && template.limits),
+  ...(template && key && template.variantLimits && template.variantLimits[key]),
+});
 
-// Returns a list of problems (empty = fits)
-export function check(template, data) {
-  const L = limitsFor(template);
+// Design switches every template supports (the engine draws them). Templates add their own in `options`.
+// default: true/false, or a list of slide types it's on for
+export const SHARED_OPTIONS = [
+  { key: 'progress', label: 'شريط التقدّم', default: false },
+  { key: 'bignum', label: 'رقم كبير في الخلفية', default: false },
+  { key: 'swipe', label: '«اسحب ←»', default: true },
+  { key: 'pagenum', label: 'رقم الصفحة', default: true },
+];
+
+// Per-slide pieces: which template, which layout key, which switches are on
+export function slideTemplate(template, s, templatesById) {
+  return (s && s.tpl && templatesById && templatesById[s.tpl]) || template;
+}
+export function slideKey(template, s) {
+  const k = s.variant ? `${s.type}~${s.variant}` : s.type;
+  return template.slides[k] ? k : s.type;
+}
+export function slideOptions(template, s, docOpts) {
+  const o = {};
+  for (const opt of [...SHARED_OPTIONS, ...(template.options || [])]) {
+    o[opt.key] = Array.isArray(opt.default) ? opt.default.includes(s.type) : !!opt.default;
+  }
+  return { ...o, ...(docOpts || {}), ...(s.o || {}) };
+}
+
+// Returns a list of problems (empty = fits). templatesById: other templates single slides can use.
+export function check(template, data, templatesById) {
   const out = [];
   (data.slides || []).forEach((s, i) => {
-    if (!template.slides[s.type]) out.push(`slide ${i + 1}: this template has no "${s.type}" slide`);
+    const t = slideTemplate(template, s, templatesById);
+    const L = limitsFor(t, slideKey(t, s));
+    if (!t.slides[s.type]) out.push(`slide ${i + 1}: this template has no "${s.type}" slide`);
     for (const [k, v] of Object.entries(s)) {
       if (k === 'bullets' && Array.isArray(v)) {
         if (v.length > L.bullets) out.push(`slide ${i + 1}: max ${L.bullets} bullets`);
@@ -85,38 +116,57 @@ export function check(template, data) {
 }
 
 // brandCss: from brand.js (fonts + tokens + footer). Returns the whole document.
-export function renderDoc(template, data, brandCss) {
+// Each slide can use another template (slide.tpl), a layout variant (slide.variant) and its own
+// switches (slide.o, over data.opts). Every slide sits in <div class="sw tpl-<id>">, so each
+// template's CSS (all scoped to .tpl-<id>) only touches its own slides.
+export function renderDoc(template, data, brandCss, templatesById) {
   const slides = data.slides || [];
   const total = slides.length;
+  const used = new Map([[template.id, template]]);
   const body = slides
     .map((s, i) => {
+      const t = slideTemplate(template, s, templatesById);
+      used.set(t.id, t);
+      const key = slideKey(t, s);
+      const o = slideOptions(t, s, data.opts);
+      // the engine draws window dots itself unless the template places them (ownDots)
       const ctx = {
         ...s,
         author: data.author,
         index: i + 1,
+        nn: String(i + 1).padStart(2, '0'),
         total,
         page: `${i + 1}/${total}`,
+        progress: Math.round(((i + 1) / total) * 1000) / 10,
         first: i === 0,
         last: i === total - 1,
         multi: total > 1,
         more: total > 1 && i < total - 1,
+        // ownDots: true, or the layout keys that draw their own dots
+        o: { ...o, xdots: o.dots && !(t.ownDots === true || (Array.isArray(t.ownDots) && t.ownDots.includes(key))) },
       };
-      const inner = fill(template.slides[s.type] || '', ctx);
-      const foot = template.footer === false ? '' : fill(FOOTER, ctx);
+      const inner = fill(t.slides[key] || '', ctx);
+      const foot = t.footer === false ? '' : fill(FOOTER, ctx);
+      const extras = fill(EXTRAS, ctx);
       // "dense" = lots of bullet text; layouts tighten spacing for it
       const bulletChars = (s.bullets || []).join('').length;
       const dense = (s.bullets || []).length >= 5 || bulletChars > 170 ? ' data-dense' : '';
-      return `<section class="slide slide--${s.type}" data-len="${lenClass(s.title || s.text)}"${dense}>${inner}${foot}</section>`;
+      const variant = key !== s.type ? ` slide--${key.replace('~', '--')}` : '';
+      return `<div class="sw tpl-${t.id}"><section class="slide slide--${s.type}${variant}" data-len="${lenClass(s.title || s.text)}"${dense}>${extras}${inner}${foot}</section></div>`;
     })
     .join('\n');
+  const css = [...used.values()].map((t) => t.css).join('\n');
   // dir="rtl" goes on <body>, not <html>: an RTL root makes headless Chrome (Gotenberg) place the
   // 1080px page at the right edge of a wider viewport, so screenshots came out blank (tested).
   return `<!doctype html><html lang="ar"><head><meta charset="utf-8">
-<style>${brandCss}\n${template.css}</style></head>
-<body dir="rtl" class="tpl-${template.id}">${body}</body></html>`;
+<style>${brandCss}\n${css}</style></head>
+<body dir="rtl" class="doc">${body}</body></html>`;
 }
+
+// Shared extras the engine draws on top of any template (switched by slide options)
+const EXTRAS = `{{#o.progress}}<div class="x-progress"><i style="width:{{progress}}%"></i></div>{{/o.progress}}{{#o.bignum}}<div class="x-bignum">{{nn}}</div>{{/o.bignum}}{{#o.xdots}}<span class="x-dots"><i></i><i></i><i></i></span>{{/o.xdots}}`;
 
 const FOOTER = `<footer class="foot">
   <div class="foot-who"><strong>{{author.ar}}</strong><span>{{author.en}}</span></div>
-  {{#multi}}<div class="foot-end">{{#more}}<span class="foot-swipe">اسحب <i>←</i></span>{{/more}}<span class="foot-page">{{page}}</span></div>{{/multi}}
+  {{#multi}}<div class="foot-end">{{#more}}{{#o.swipe}}<span class="foot-swipe">اسحب <i>←</i></span>{{/o.swipe}}{{/more}}{{#o.pagenum}}<span class="foot-page">{{page}}</span>{{/o.pagenum}}</div>{{/multi}}
 </footer>`;

@@ -55,6 +55,7 @@ const FIELD_NAMES: Record<string, string> = {
 };
 const LONG_FIELDS = new Set(['subtitle', 'body', 'text', 'note', 'label', 'bullets']);
 const CAPTION_MAX = 3000;
+const LINK_WAIT_MS = 100_000;
 
 const FONT_URLS: Record<string, string> = {
   'FatimahArabic-Regular.woff': fatimahRegular,
@@ -158,6 +159,9 @@ export default function LinkedInAgent() {
   const [scheduleOn, setScheduleOn] = useState(false);
   const [scheduleAt, setScheduleAt] = useState(localInput(60));
   const [postUrl, setPostUrl] = useState('');
+  // LinkedIn needs ~1–2 min to process a carousel/image before its link opens (tested: ~80 s);
+  // until then the link shows "Post not found", so the button waits
+  const [linkReadyAt, setLinkReadyAt] = useState(0);
 
   const [history, setHistory] = useState<HistoryRow[]>([]);
   const [historyState, setHistoryState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -166,7 +170,7 @@ export default function LinkedInAgent() {
   const inFlight = useRef(false);
   const abort = useRef<AbortController | null>(null);
 
-  const ticking = phase === 'working' || phase === 'publishing' || busy !== '';
+  const ticking = phase === 'working' || phase === 'publishing' || busy !== '' || (!!postUrl && now < linkReadyAt);
   useEffect(() => {
     if (!ticking) return;
     const id = setInterval(() => setNow(Date.now()), 250);
@@ -364,6 +368,8 @@ export default function LinkedInAgent() {
         })
       );
       setPostUrl(r.post_url || '');
+      setLinkReadyAt(draftType === 'text' ? 0 : Date.now() + LINK_WAIT_MS);
+      setNow(Date.now());
       setPhase(r.scheduled ? 'scheduled' : 'published');
       loadHistory();
     } catch (err) {
@@ -709,11 +715,16 @@ export default function LinkedInAgent() {
                   <input dir="auto" value={docTitle} maxLength={100} onChange={(e) => setDocTitle(e.target.value)} disabled={!editable} />
                 </label>
               )}
-              {postUrl && (
-                <a className="post-open" href={postUrl} target="_blank" rel="noreferrer">
-                  افتح في لينكدإن ↗
-                </a>
-              )}
+              {postUrl &&
+                (now < linkReadyAt ? (
+                  <span className="post-open waiting" aria-live="polite">
+                    <span className="spinner" /> لينكدإن يجهّز الملف… <span dir="ltr">{elapsed(linkReadyAt - now)}</span>
+                  </span>
+                ) : (
+                  <a className="post-open" href={postUrl} target="_blank" rel="noreferrer">
+                    افتح في لينكدإن ↗
+                  </a>
+                ))}
             </article>
 
             {editable && (

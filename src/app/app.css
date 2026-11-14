@@ -258,6 +258,7 @@
   line-height: 1.8; color: var(--heading); background: var(--surface); unicode-bidi: plaintext;
 }
 .li-app .caption-edit:focus { border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgb(31 154 46 / 0.12); }
+.li-app .post-open.waiting { gap: 8px; align-items: center; background: var(--surface); color: var(--body); border: 1px solid var(--line-strong); font-weight: 600; }
 .li-app .caption-loading { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14px; min-height: 80px; }
 .li-app .caption-count { display: flex; justify-content: space-between; gap: 8px; margin-top: 6px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .li-app .caption-count.over { color: var(--danger); }

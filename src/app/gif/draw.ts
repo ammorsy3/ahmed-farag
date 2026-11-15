@@ -39,11 +39,25 @@ export function rr(ctx: Ctx, x: number, y: number, w: number, h: number, r: numb
   ctx.closePath();
 }
 
-// Light paper background with a faint grid (like a whiteboard)
-export function gridBg(ctx: Ctx, w: number, h: number) {
-  ctx.fillStyle = C.surface;
-  ctx.fillRect(0, 0, w, h);
-  ctx.strokeStyle = 'rgba(15,26,20,0.055)';
+// Light paper background with a faint grid (like a whiteboard), or the forest-green one (dark)
+export function gridBg(ctx: Ctx, w: number, h: number, dark = false) {
+  if (dark) {
+    const g = ctx.createLinearGradient(0, 0, w * 0.45, h);
+    g.addColorStop(0, '#0F1A14');
+    g.addColorStop(0.35, C.forest);
+    g.addColorStop(1, C.primaryHover);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+    const glow = ctx.createRadialGradient(w * 0.92, -h * 0.06, 0, w * 0.92, -h * 0.06, w * 0.95);
+    glow.addColorStop(0, 'rgba(47,191,63,0.55)');
+    glow.addColorStop(1, 'rgba(47,191,63,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, w, h);
+  } else {
+    ctx.fillStyle = C.surface;
+    ctx.fillRect(0, 0, w, h);
+  }
+  ctx.strokeStyle = dark ? 'rgba(255,255,255,0.05)' : 'rgba(15,26,20,0.055)';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   for (let x = 0.5; x < w; x += 44) {
@@ -160,7 +174,7 @@ export function drawLines(
 export const charCount = (lines: Lines) => lines.reduce((n, l) => n + l.tokens.reduce((m, t) => m + t.word.length + 1, 0), 0);
 
 // Small round author chip: photo (or initial), Arabic name and English name
-export function authorChip(ctx: Ctx, cx: number, y: number, photo: HTMLImageElement | null, ar: string, en: string) {
+export function authorChip(ctx: Ctx, cx: number, y: number, photo: HTMLImageElement | null, ar: string, en: string, dark = false) {
   ctx.font = `800 30px ${AR}`;
   ctx.direction = 'rtl';
   const nameW = Math.max(ctx.measureText(ar).width, (() => {
@@ -196,10 +210,10 @@ export function authorChip(ctx: Ctx, cx: number, y: number, photo: HTMLImageElem
   ctx.stroke();
   ctx.textAlign = 'right';
   ctx.direction = 'rtl';
-  ctx.fillStyle = C.heading;
+  ctx.fillStyle = dark ? '#fff' : C.heading;
   ctx.font = `800 30px ${AR}`;
   ctx.fillText(ar, ax - 18, y + 34);
-  ctx.fillStyle = C.muted;
+  ctx.fillStyle = dark ? 'rgba(255,255,255,0.7)' : C.muted;
   ctx.font = `600 22px ${EN}`;
   ctx.direction = 'ltr';
   ctx.textAlign = 'right';

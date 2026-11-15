@@ -155,7 +155,9 @@ export function renderDoc(template, data, brandCss, templatesById) {
       const bulletChars = (s.bullets || []).join('').length;
       const dense = (s.bullets || []).length >= 5 || bulletChars > 170 ? ' data-dense' : '';
       const variant = key !== s.type ? ` slide--${key.replace('~', '--')}` : '';
-      return `<div class="sw tpl-${t.id}"><section class="slide slide--${s.type}${variant}" data-len="${lenClass(s.title || s.text)}"${dense}>${extras}${inner}${foot}</section></div>`;
+      // every switch that is on becomes a class (o-light, o-values…), so a template can restyle the whole slide
+      const on = Object.keys(o).filter((k) => o[k] === true && /^[a-z0-9]+$/i.test(k)).map((k) => ` o-${k}`).join('');
+      return `<div class="sw tpl-${t.id}"><section class="slide slide--${s.type}${variant}${on}" data-len="${lenClass(s.title || s.text)}"${dense}>${extras}${inner}${foot}</section></div>`;
     })
     .join('\n');
   const css = [...used.values()].map((t) => t.css).join('\n');

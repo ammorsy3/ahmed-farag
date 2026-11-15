@@ -9,6 +9,14 @@ import { GIF_H, GIF_SCENES, GIF_W, type GifSlide, type Scene } from './scenes';
 
 export { GIF_SCENES, GIF_W, GIF_H, type GifSlide };
 
+// Design switches for a GIF: dark background, speed (1 = normal, <1 slower, >1 faster), name chip
+export type GifOptions = { dark?: boolean; speed?: number; author?: boolean };
+export const GIF_SPEEDS = [
+  { value: 0.75, label: 'أبطأ' },
+  { value: 1, label: 'عادي' },
+  { value: 1.35, label: 'أسرع' },
+];
+
 const FRAME_MS = 80; // 12.5 frames a second, smooth enough and well under LinkedIn's 250-frame limit
 const AUTHOR = { ar: 'أحمد فرج', en: 'Ahmed Farag' };
 
@@ -37,11 +45,14 @@ function loadPhoto() {
   return photo;
 }
 
-async function makeScene(slide: GifSlide, canvas: HTMLCanvasElement): Promise<Scene> {
+async function makeScene(slide: GifSlide, canvas: HTMLCanvasElement, opts: GifOptions = {}): Promise<Scene> {
   await loadGifFonts();
   const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
   const def = GIF_SCENES[slide.type] || GIF_SCENES.demo;
-  return def.build(ctx, slide, { author: AUTHOR, photo: await loadPhoto() });
+  const scene = def.build(ctx, slide, { author: opts.author === false ? null : AUTHOR, photo: await loadPhoto(), dark: !!opts.dark });
+  // speed: the same animation on a shorter or longer clock
+  const k = opts.speed && opts.speed > 0 ? opts.speed : 1;
+  return k === 1 ? scene : { duration: scene.duration / k, draw: (t) => scene.draw(t * k) };
 }
 
 function newCanvas() {
@@ -52,15 +63,15 @@ function newCanvas() {
 }
 
 // A still frame (for previews): t = 'end' is the finished state
-export async function gifFrame(slide: GifSlide, t: number | 'end', canvas = newCanvas()) {
-  const scene = await makeScene(slide, canvas);
+export async function gifFrame(slide: GifSlide, t: number | 'end', canvas = newCanvas(), opts: GifOptions = {}) {
+  const scene = await makeScene(slide, canvas, opts);
   scene.draw(t === 'end' ? scene.duration : t);
   return { canvas, duration: scene.duration };
 }
 
 // Plays the scene on a canvas (live preview); returns a stop function
-export async function playGif(slide: GifSlide, canvas: HTMLCanvasElement) {
-  const scene = await makeScene(slide, canvas);
+export async function playGif(slide: GifSlide, canvas: HTMLCanvasElement, opts: GifOptions = {}) {
+  const scene = await makeScene(slide, canvas, opts);
   let raf = 0;
   const t0 = performance.now();
   const tick = () => {
@@ -71,9 +82,9 @@ export async function playGif(slide: GifSlide, canvas: HTMLCanvasElement) {
   return () => cancelAnimationFrame(raf);
 }
 
-export async function makeGif(slide: GifSlide, onProgress?: (p: number) => void): Promise<{ bytes: Uint8Array; frames: number; durationMs: number }> {
+export async function makeGif(slide: GifSlide, onProgress?: (p: number) => void, opts: GifOptions = {}): Promise<{ bytes: Uint8Array; frames: number; durationMs: number }> {
   const canvas = newCanvas();
-  const scene = await makeScene(slide, canvas);
+  const scene = await makeScene(slide, canvas, opts);
   const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
   const grab = (t: number) => {
     scene.draw(t);

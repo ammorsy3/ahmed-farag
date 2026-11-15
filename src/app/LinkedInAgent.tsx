@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { renderDoc, check, limitsFor, slideKey, slideTemplate, type SlideData, type OptionDef } from './linkedin-templates/engine.js';
 import { applyRhythm, clearRhythm, type Opts } from './design';
-import { CarouselDesign, SlideDesign } from './CarouselDesign';
+import { CarouselDesign, GifDesign, ImageDesign, SlideDesign } from './CarouselDesign';
 import LinkedInFeedPreview from './LinkedInFeedPreview';
 import { brandCss, AUTHOR } from './linkedin-templates/brand.js';
-import { GIF_SCENES, gifFrame, makeGif, playGif } from './gif';
+import { GIF_SCENES, gifFrame, makeGif, playGif, type GifOptions } from './gif';
 import fatimahRegular from './linkedin-templates/fonts/FatimahArabic-Regular.woff?url';
 import fatimahHeavy from './linkedin-templates/fonts/FatimahArabic-Heavy.woff?url';
 import inter400 from './linkedin-templates/fonts/Inter-400.woff2?url';
@@ -201,6 +201,8 @@ export default function LinkedInAgent() {
   const [selected, setSelected] = useState(0);
   // carousel-wide design switches (dots, progress bar, big numbers…) and "auto rhythm" (mix looks per slide)
   const [docOpts, setDocOpts] = useState<Opts>({});
+  // GIF design: dark background, speed, name chip
+  const [gifOpts, setGifOpts] = useState<GifOptions>({ dark: false, speed: 1, author: true });
   const [rhythm, setRhythm] = useState(true);
 
   const [rendered, setRendered] = useState<(Rendered & { key: string }) | null>(null);
@@ -364,7 +366,12 @@ export default function LinkedInAgent() {
   }
 
   // what the file would contain right now; a render is only reused while this stays the same
-  const contentKey = JSON.stringify([draftTpl, slides, docOpts]);
+  // a single image only takes its own template's switches (carousel ones like the progress bar don't apply)
+  const postOpts: Opts =
+    template && template.kind !== 'carousel'
+      ? Object.fromEntries(Object.entries(docOpts).filter(([k]) => template.options.some((d) => d.key === k)))
+      : docOpts;
+  const contentKey = JSON.stringify([draftTpl, slides, postOpts, isGif ? gifOpts : null]);
   const issues: string[] = useMemo(() => (template && slides.length ? check(template, { slides }, byId) : []), [template, slides, byId]);
   const fileReady = !!rendered && rendered.key === contentKey;
 
@@ -372,7 +379,7 @@ export default function LinkedInAgent() {
   async function makeGifFile(): Promise<Rendered> {
     setGifProgress(0);
     try {
-      const g = await makeGif(slides[0], (p) => setGifProgress(p));
+      const g = await makeGif(slides[0], (p) => setGifProgress(p), gifOpts);
       return { file_b64: toBase64(g.bytes), mime: 'image/gif', kind: 'gif', slide_count: 1, issues: [], bytes: g.bytes.length };
     } finally {
       setGifProgress(null);
@@ -382,7 +389,7 @@ export default function LinkedInAgent() {
   async function render(): Promise<Rendered> {
     if (fileReady && rendered) return rendered;
     const r = await step('render', () =>
-      isGif ? makeGifFile() : callAgent<Rendered>({ action: 'render', template_id: draftTpl, slides, opts: docOpts })
+      isGif ? makeGifFile() : callAgent<Rendered>({ action: 'render', template_id: draftTpl, slides, opts: postOpts })
     );
     if (!r.file_b64) throw new Error(isGif ? 'ما قدرنا نسوي الـGIF.' : 'ما رجع ملف من Gotenberg.');
     setRendered({ ...r, key: contentKey });
@@ -428,7 +435,7 @@ export default function LinkedInAgent() {
           idea: topic.current,
           // the picture travels inside the file already; keep history rows small
           slides: slides.map(({ image_url, ...s }) => s),
-          opts: docOpts,
+          opts: postOpts,
           file_b64: file?.file_b64 || '',
           mime: file?.mime || '',
           schedule_at: scheduleOn ? scheduleDate.toISOString() : '',
@@ -640,9 +647,9 @@ export default function LinkedInAgent() {
             <div className="li-visual">
               <div className="li-stage">
                 {slides.length > 0 && isGif ? (
-                  <GifStage slide={slides[0]} width={stageWidth} />
+                  <GifStage slide={slides[0]} width={stageWidth} opts={gifOpts} />
                 ) : slides.length > 0 ? (
-                  <SlidePreview template={template} slides={slides} index={Math.min(selected, slides.length - 1)} width={stageWidth} byId={byId} opts={docOpts} />
+                  <SlidePreview template={template} slides={slides} index={Math.min(selected, slides.length - 1)} width={stageWidth} byId={byId} opts={postOpts} />
                 ) : (
                   <div className="li-stage-empty">ما فيه شرائح</div>
                 )}
@@ -658,7 +665,7 @@ export default function LinkedInAgent() {
                 <div className="thumbs">
                   {slides.map((_s, i) => (
                     <button key={i} type="button" className={`thumb ${i === selected ? 'on' : ''}`} onClick={() => setSelected(i)} aria-label={`الشريحة ${i + 1}`}>
-                      <SlidePreview template={template} slides={slides} index={i} width={64} byId={byId} opts={docOpts} />
+                      <SlidePreview template={template} slides={slides} index={i} width={64} byId={byId} opts={postOpts} />
                       <span>{i + 1}</span>
                     </button>
                   ))}
@@ -704,6 +711,12 @@ export default function LinkedInAgent() {
 
               {editable && template.kind === 'carousel' && (
                 <CarouselDesign template={template} docOpts={docOpts} onDocOpts={setDocOpts} rhythm={rhythm} onRhythm={toggleRhythm} />
+              )}
+
+              {editable && isGif && <GifDesign opts={gifOpts} onChange={setGifOpts} />}
+
+              {editable && template.kind !== 'carousel' && !isGif && template.options.length > 0 && (
+                <ImageDesign template={template} docOpts={docOpts} onDocOpts={setDocOpts} />
               )}
             </div>
           )}
@@ -812,9 +825,9 @@ export default function LinkedInAgent() {
                           fileReady && rendered ? (
                             <img src={`data:image/gif;base64,${rendered.file_b64}`} width={w} height={(w * 1350) / 1080} alt="" style={{ display: 'block' }} />
                           ) : (
-                            <GifStill slide={slides[0]} width={w} />
+                            <GifStill slide={slides[0]} width={w} opts={gifOpts} />
                           )
-                      : (w) => <SlidePreview template={template} slides={slides} index={0} width={w} byId={byId} opts={docOpts} />
+                      : (w) => <SlidePreview template={template} slides={slides} index={0} width={w} byId={byId} opts={postOpts} />
                     : undefined
                 }
               />
@@ -1040,14 +1053,14 @@ const GIF_SAMPLE = { type: 'chat', kicker: 'وكيلك الذكي', title: 'أب
 const gifBox = (width: number) => ({ width, height: (width * 1350) / 1080, display: 'block', borderRadius: 14 });
 
 // Plays the animation live (same drawing code that makes the GIF)
-function GifStage({ slide, width }: { slide: Slide; width: number }) {
+function GifStage({ slide, width, opts }: { slide: Slide; width: number; opts?: GifOptions }) {
   const ref = useRef<HTMLCanvasElement>(null);
-  const key = JSON.stringify(slide);
+  const key = JSON.stringify([slide, opts]);
   useEffect(() => {
     let stop: (() => void) | null = null;
     let cancelled = false;
     if (ref.current) {
-      playGif(slide as never, ref.current).then((s) => (cancelled ? s() : (stop = s)));
+      playGif(slide as never, ref.current, opts).then((s) => (cancelled ? s() : (stop = s)));
     }
     return () => {
       cancelled = true;
@@ -1058,11 +1071,11 @@ function GifStage({ slide, width }: { slide: Slide; width: number }) {
 }
 
 // One still frame: the first one (what the feed shows first) or the finished one (template picker)
-function GifStill({ slide, width, at = 0 }: { slide: Slide; width: number; at?: 0 | 'end' }) {
+function GifStill({ slide, width, at = 0, opts }: { slide: Slide; width: number; at?: 0 | 'end'; opts?: GifOptions }) {
   const ref = useRef<HTMLCanvasElement>(null);
-  const key = JSON.stringify(slide);
+  const key = JSON.stringify([slide, opts]);
   useEffect(() => {
-    if (ref.current) gifFrame(slide as never, at, ref.current);
+    if (ref.current) gifFrame(slide as never, at, ref.current, opts);
   }, [key, at]); // eslint-disable-line react-hooks/exhaustive-deps
   return <canvas ref={ref} width={1080} height={1350} style={gifBox(width)} aria-hidden="true" />;
 }

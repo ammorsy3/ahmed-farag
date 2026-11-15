@@ -3,6 +3,7 @@
 //  - SlideDesign: the selected slide's template, layout and its own switches
 import { slideOptions, slideTemplate, type SlideData } from './linkedin-templates/engine.js';
 import { docSwitchOn, fitsLayout, layoutsFor, optionDefs, toggleDocSwitch, type DesignTemplate, type Opts } from './design';
+import { GIF_SPEEDS, type GifOptions } from './gif';
 
 function Switch({ label, hint, on, onChange, marked }: { label: string; hint?: string; on: boolean; onChange: () => void; marked?: boolean }) {
   return (
@@ -125,6 +126,51 @@ export function SlideDesign({
       {optionDefs(t).map((def) => (
         <Switch key={def.key} label={def.label} on={!!effective[def.key]} marked={def.key in own} onChange={() => flip(def.key)} />
       ))}
+    </div>
+  );
+}
+
+// Image and ranking posts: the template's own switches (light/dark, window dots, show or hide parts)
+export function ImageDesign({ template, docOpts, onDocOpts }: { template: DesignTemplate; docOpts: Opts; onDocOpts: (o: Opts) => void }) {
+  return (
+    <div className="design-box">
+      <div className="design-head">
+        <strong>تصميم الصورة</strong>
+      </div>
+      {(template.options || []).map((def) => (
+        <Switch key={def.key} label={def.label} on={docSwitchOn(def, docOpts)} onChange={() => onDocOpts(toggleDocSwitch(def, docOpts))} />
+      ))}
+    </div>
+  );
+}
+
+// GIF posts: background, speed and the name chip
+export function GifDesign({ opts, onChange }: { opts: GifOptions; onChange: (o: GifOptions) => void }) {
+  return (
+    <div className="design-box">
+      <div className="design-head">
+        <strong>تصميم الـGIF</strong>
+      </div>
+      <div className="design-chips">
+        <span className="muted small-text">الخلفية</span>
+        {[
+          { dark: false, label: 'فاتحة' },
+          { dark: true, label: 'داكنة' },
+        ].map((b) => (
+          <button key={b.label} type="button" className={`chip-btn ${!!opts.dark === b.dark ? 'on' : ''}`} aria-pressed={!!opts.dark === b.dark} onClick={() => onChange({ ...opts, dark: b.dark })}>
+            {b.label}
+          </button>
+        ))}
+      </div>
+      <div className="design-chips">
+        <span className="muted small-text">السرعة</span>
+        {GIF_SPEEDS.map((sp) => (
+          <button key={sp.value} type="button" className={`chip-btn ${(opts.speed || 1) === sp.value ? 'on' : ''}`} aria-pressed={(opts.speed || 1) === sp.value} onClick={() => onChange({ ...opts, speed: sp.value })}>
+            {sp.label}
+          </button>
+        ))}
+      </div>
+      <Switch label="اسمي وصورتي تحت" on={opts.author !== false} onChange={() => onChange({ ...opts, author: opts.author === false })} />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { applyRhythm, clearRhythm, type Opts } from './design';
 import { CarouselDesign, SlideDesign } from './CarouselDesign';
 import LinkedInFeedPreview from './LinkedInFeedPreview';
 import { brandCss, AUTHOR } from './linkedin-templates/brand.js';
+import { GIF_SCENES, gifFrame, makeGif, playGif } from './gif';
 import fatimahRegular from './linkedin-templates/fonts/FatimahArabic-Regular.woff?url';
 import fatimahHeavy from './linkedin-templates/fonts/FatimahArabic-Heavy.woff?url';
 import inter400 from './linkedin-templates/fonts/Inter-400.woff2?url';
@@ -17,14 +18,15 @@ import inter800 from './linkedin-templates/fonts/Inter-800.woff2?url';
 // The preview uses the same template engine n8n uses, so what you see is what gets posted.
 // Nothing reaches LinkedIn until the publish button is pressed.
 
-type PostType = 'text' | 'image' | 'carousel';
+type PostType = 'text' | 'image' | 'carousel' | 'ranking' | 'gif';
+type Kind = 'carousel' | 'image' | 'ranking' | 'gif';
 // a slide may also carry tpl (another template), variant (layout) and o (its own design switches)
 type Slide = SlideData;
 type Template = {
-  id: string; name: string; nameAr: string; kind: 'carousel' | 'image'; css: string; slides: Record<string, string>; limits: Record<string, number>;
+  id: string; name: string; nameAr: string; kind: Kind; css: string; slides: Record<string, string>; limits: Record<string, number>;
   options: OptionDef[]; variants: Record<string, string>; variantLimits: Record<string, Record<string, number>>; ownDots: boolean | string[];
 };
-type TemplateRow = { template_id: string; name: string; name_ar: string; kind: 'carousel' | 'image'; css: string; slides_json: string; limits_json: string; options_json?: string };
+type TemplateRow = { template_id: string; name: string; name_ar: string; kind: Kind; css: string; slides_json: string; limits_json: string; options_json?: string };
 type Draft = { post_text: string; doc_title: string; image_brief: string; template_id: string; slides: Slide[]; issues: string[] };
 type Rendered = { file_b64: string; mime: string; kind: string; slide_count: number; issues: string[]; bytes: number };
 type HistoryRow = { ref?: string; post_type?: string; template_id?: string; idea?: string; post_text?: string; status?: string; post_url?: string; scheduled_at?: string; createdAt?: string };
@@ -42,9 +44,12 @@ const POST_TYPES: { id: PostType; label: string; hint: string }[] = [
   { id: 'text', label: 'نص فقط', hint: 'منشور مكتوب' },
   { id: 'image', label: 'صورة', hint: 'بطاقة وحدة' },
   { id: 'carousel', label: 'كاروسيل', hint: 'ملف PDF يتقلّب' },
+  { id: 'ranking', label: 'قائمة', hint: 'ترتيب في صورة' },
+  { id: 'gif', label: 'متحرك', hint: 'صورة GIF تتحرّك' },
 ];
 const SLIDE_NAMES: Record<string, string> = {
   cover: 'الغلاف', bullets: 'نقاط', step: 'خطوة', stat: 'رقم', quote: 'اقتباس', cta: 'الختام', tip: 'نصيحة', picture: 'صورة',
+  ranking: 'قائمة', demo: 'عرض تطبيق', chat: 'محادثة', flow: 'سير عمل',
 };
 const FIELDS: Record<string, string[]> = {
   cover: ['kicker', 'title', 'subtitle'],
@@ -55,10 +60,27 @@ const FIELDS: Record<string, string[]> = {
   cta: ['title', 'body', 'action'],
   tip: ['kicker', 'title', 'bullets'],
   picture: ['title', 'subtitle'],
+  ranking: ['kicker', 'title', 'subtitle', 'bullets'],
+  demo: ['kicker', 'title', 'bullets'],
+  chat: ['kicker', 'title', 'bullets'],
+  flow: ['kicker', 'title', 'bullets'],
 };
 const FIELD_NAMES: Record<string, string> = {
   kicker: 'سطر صغير فوق العنوان', title: 'العنوان', subtitle: 'سطر تحت العنوان', bullets: 'النقاط (كل سطر نقطة)', n: 'رقم الخطوة',
   body: 'النص', value: 'الرقم الكبير', label: 'وش يعني الرقم', note: 'ملاحظة', text: 'الاقتباس', by: 'القائل', action: 'الدعوة',
+};
+// field names that mean something else on one slide type
+const TYPE_FIELD_NAMES: Record<string, Record<string, string>> = {
+  ranking: { kicker: 'شارة صغيرة', bullets: 'العناصر بالترتيب (كل سطر: إيموجي الاسم | ملاحظة | قيمة)' },
+  demo: { kicker: 'اسم التطبيق', title: 'وش يسوي التطبيق', bullets: 'التبويبات (كل سطر: التبويب | وش يعرض)' },
+  chat: { kicker: 'اسم الوكيل', title: 'رسالة العميل', bullets: 'ردود الوكيل (كل سطر رد)' },
+  flow: { kicker: 'سطر صغير', title: 'وش يسوي سير العمل', bullets: 'الخطوات بالترتيب (كل سطر خطوة)' },
+};
+const FILE_NAMES: Record<Kind, { label: string; download: string }> = {
+  carousel: { label: 'ملف PDF', download: 'carousel.pdf' },
+  image: { label: 'صورة PNG', download: 'post.png' },
+  ranking: { label: 'صورة PNG', download: 'post.png' },
+  gif: { label: 'GIF متحرك', download: 'post.gif' },
 };
 const LONG_FIELDS = new Set(['subtitle', 'body', 'text', 'note', 'label', 'bullets']);
 const CAPTION_MAX = 3000;
@@ -145,6 +167,12 @@ const slideTypes = (t: Template) => Object.keys(t.slides).filter((k) => !k.inclu
 
 const plain = (v: unknown) => String(v ?? '').replace(/==/g, '');
 
+function toBase64(bytes: Uint8Array) {
+  let s = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+
 export default function LinkedInAgent() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [templatesState, setTemplatesState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -162,6 +190,9 @@ export default function LinkedInAgent() {
   const [error, setError] = useState('');
   const [now, setNow] = useState(Date.now());
   const [busy, setBusy] = useState<'' | 'draft' | 'picture' | 'render'>('');
+  // GIF: the scene Claude picked, and how far the encoder is (0–1) while it makes the file
+  const [pickedScene, setPickedScene] = useState('');
+  const [gifProgress, setGifProgress] = useState<number | null>(null);
 
   const [postText, setPostText] = useState('');
   const [docTitle, setDocTitle] = useState('');
@@ -221,12 +252,12 @@ export default function LinkedInAgent() {
     }
   }
 
-  const kindTemplates = templates.filter((t) => (postType === 'carousel' ? t.kind === 'carousel' : postType === 'image' ? t.kind === 'image' : false));
+  const kindTemplates = templates.filter((t) => postType !== 'text' && t.kind === postType);
   const template = templates.find((t) => t.id === draftTpl) || null;
   const byId = useMemo(() => Object.fromEntries(templates.map((t) => [t.id, t])), [templates]);
   const carousels = templates.filter((t) => t.kind === 'carousel');
   // templates the open post can switch to: same kind, and every slide type it uses exists there
-  const draftTemplates = templates.filter((t) => t.kind === (draftType === 'carousel' ? 'carousel' : 'image') && slides.every((sl) => sl.type in t.slides));
+  const draftTemplates = templates.filter((t) => t.kind === draftType && slides.every((sl) => sl.type in t.slides));
 
   // keep a valid template picked for the chosen post type
   useEffect(() => {
@@ -249,6 +280,7 @@ export default function LinkedInAgent() {
 
   const needsPicture = !!template && 'picture' in template.slides && draftType === 'image';
   const needsFile = draftType !== 'text';
+  const isGif = draftType === 'gif';
 
   async function writeDraft(type: PostType, tpl: string, signal?: AbortSignal) {
     const d = await step('draft', () =>
@@ -259,6 +291,7 @@ export default function LinkedInAgent() {
     setImageBrief(d.image_brief || '');
     const drafted = Array.isArray(d.slides) ? d.slides : [];
     setSlides(type === 'carousel' && rhythm ? applyRhythm(drafted, tpl, byId) : drafted);
+    setPickedScene(type === 'gif' ? drafted[0]?.type || '' : '');
     setSelected(0);
     setRendered(null);
     return d;
@@ -335,10 +368,23 @@ export default function LinkedInAgent() {
   const issues: string[] = useMemo(() => (template && slides.length ? check(template, { slides }, byId) : []), [template, slides, byId]);
   const fileReady = !!rendered && rendered.key === contentKey;
 
+  // A GIF is made here in the browser (canvas → gifenc); everything else is rendered by n8n (Gotenberg)
+  async function makeGifFile(): Promise<Rendered> {
+    setGifProgress(0);
+    try {
+      const g = await makeGif(slides[0], (p) => setGifProgress(p));
+      return { file_b64: toBase64(g.bytes), mime: 'image/gif', kind: 'gif', slide_count: 1, issues: [], bytes: g.bytes.length };
+    } finally {
+      setGifProgress(null);
+    }
+  }
+
   async function render(): Promise<Rendered> {
     if (fileReady && rendered) return rendered;
-    const r = await step('render', () => callAgent<Rendered>({ action: 'render', template_id: draftTpl, slides, opts: docOpts }));
-    if (!r.file_b64) throw new Error('ما رجع ملف من Gotenberg.');
+    const r = await step('render', () =>
+      isGif ? makeGifFile() : callAgent<Rendered>({ action: 'render', template_id: draftTpl, slides, opts: docOpts })
+    );
+    if (!r.file_b64) throw new Error(isGif ? 'ما قدرنا نسوي الـGIF.' : 'ما رجع ملف من Gotenberg.');
     setRendered({ ...r, key: contentKey });
     return r;
   }
@@ -527,7 +573,7 @@ export default function LinkedInAgent() {
                   disabled={phase === 'working' || phase === 'publishing' || busy !== ''}
                   title={t.name}
                 >
-                  <SlidePreview template={t} slides={[sampleSlide(t)]} index={0} width={92} />
+                  {t.kind === 'gif' ? <GifStill slide={GIF_SAMPLE} width={92} at="end" /> : <SlidePreview template={t} slides={[sampleSlide(t)]} index={0} width={92} />}
                   <span>{t.nameAr}</span>
                 </button>
               ))}
@@ -593,7 +639,9 @@ export default function LinkedInAgent() {
           {needsFile && template && (
             <div className="li-visual">
               <div className="li-stage">
-                {slides.length > 0 ? (
+                {slides.length > 0 && isGif ? (
+                  <GifStage slide={slides[0]} width={stageWidth} />
+                ) : slides.length > 0 ? (
                   <SlidePreview template={template} slides={slides} index={Math.min(selected, slides.length - 1)} width={stageWidth} byId={byId} opts={docOpts} />
                 ) : (
                   <div className="li-stage-empty">ما فيه شرائح</div>
@@ -623,6 +671,26 @@ export default function LinkedInAgent() {
                 </button>
               )}
 
+              {isGif && slides[0] && (
+                <div className="li-switch">
+                  <span className="muted small-text">
+                    {pickedScene && GIF_SCENES[pickedScene] ? `الوكيل اختار «${GIF_SCENES[pickedScene].label}»، وتقدر تغيّره:` : 'شكل الحركة:'}
+                  </span>
+                  {Object.entries(GIF_SCENES).map(([id, sc]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`chip-btn ${slides[0].type === id ? 'on' : ''}`}
+                      aria-pressed={slides[0].type === id}
+                      onClick={() => updateSlide(0, { type: id })}
+                      disabled={!editable}
+                    >
+                      {sc.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {editable && draftTemplates.length > 1 && (
                 <div className="li-switch">
                   <span className="muted small-text">غيّر القالب:</span>
@@ -645,7 +713,7 @@ export default function LinkedInAgent() {
               <div className="slide-editor">
                 <div className="slide-editor-head">
                   <strong>
-                    {template.kind === 'carousel' ? `الشريحة ${selected + 1} من ${slides.length}` : 'نص الصورة'} · {SLIDE_NAMES[current.type] || current.type}
+                    {template.kind === 'carousel' ? `الشريحة ${selected + 1} من ${slides.length}` : isGif ? 'نص الـGIF' : 'نص الصورة'} · {SLIDE_NAMES[current.type] || current.type}
                   </strong>
                   {template.kind === 'carousel' && editable && (
                     <div className="slide-tools">
@@ -689,7 +757,7 @@ export default function LinkedInAgent() {
                   return (
                     <label key={f} className={`field ${over ? 'over' : ''}`}>
                       <span className="field-top">
-                        {FIELD_NAMES[f] || f}
+                        {TYPE_FIELD_NAMES[current.type]?.[f] || FIELD_NAMES[f] || f}
                         <em dir="ltr">{count}</em>
                       </span>
                       {LONG_FIELDS.has(f) ? (
@@ -739,7 +807,14 @@ export default function LinkedInAgent() {
                 pages={draftType === 'carousel' ? slides.length : undefined}
                 media={
                   needsFile && template && slides.length
-                    ? (w) => <SlidePreview template={template} slides={slides} index={0} width={w} byId={byId} opts={docOpts} />
+                    ? isGif
+                      ? (w) =>
+                          fileReady && rendered ? (
+                            <img src={`data:image/gif;base64,${rendered.file_b64}`} width={w} height={(w * 1350) / 1080} alt="" style={{ display: 'block' }} />
+                          ) : (
+                            <GifStill slide={slides[0]} width={w} />
+                          )
+                      : (w) => <SlidePreview template={template} slides={slides} index={0} width={w} byId={byId} opts={docOpts} />
                     : undefined
                 }
               />
@@ -794,18 +869,27 @@ export default function LinkedInAgent() {
             {needsFile && (phase === 'review' || phase === 'publishing') && (
               <div className="file-box">
                 <div>
-                  <strong>{draftType === 'carousel' ? 'ملف PDF' : 'صورة PNG'}</strong>
+                  <strong>{FILE_NAMES[draftType as Kind]?.label || 'الملف'}</strong>
                   <span className="muted small-text">
-                    {fileReady && rendered ? ` · جاهز (${Math.round(rendered.bytes / 1024)} KB)` : ' · يتجهّز وقت النشر، أو جهّزه الحين عشان تشوفه'}
+                    {fileReady && rendered
+                      ? ` · جاهز (${Math.round(rendered.bytes / 1024)} KB)`
+                      : gifProgress != null
+                        ? ` · يرسم الحركة… ${Math.round(gifProgress * 100)}%`
+                        : ' · يتجهّز وقت النشر، أو جهّزه الحين عشان تشوفه'}
                   </span>
+                  {gifProgress != null && (
+                    <span className="gif-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(gifProgress * 100)}>
+                      <i style={{ width: `${gifProgress * 100}%` }} />
+                    </span>
+                  )}
                 </div>
                 {fileReady && rendered ? (
-                  <a className="btn ghost small" href={`data:${rendered.mime};base64,${rendered.file_b64}`} download={draftType === 'carousel' ? 'carousel.pdf' : 'post.png'}>
+                  <a className="btn ghost small" href={`data:${rendered.mime};base64,${rendered.file_b64}`} download={FILE_NAMES[draftType as Kind]?.download || 'post'}>
                     نزّل الملف
                   </a>
                 ) : (
                   <button type="button" className="btn ghost small" onClick={renderNow} disabled={!!busy || issues.length > 0 || pictureMissing || phase !== 'review'}>
-                    {busy === 'render' ? 'يجهّز…' : 'جهّز الملف'}
+                    {busy === 'render' || gifProgress != null ? 'يجهّز…' : 'جهّز الملف'}
                   </button>
                 )}
               </div>
@@ -895,6 +979,10 @@ function sampleSlide(t: Template): Slide {
     quote: { type: 'quote', text: 'الأتمتة تبدأ من ==فهمك لشغلك==.', by: 'أحمد فرج' },
     tip: { type: 'tip', kicker: 'نصيحة', title: '٣ أشياء قبل ==أول وكيل==', bullets: ['حدد المشكلة', 'رتب بياناتك', 'جرّب يدوي'] },
     picture: { type: 'picture', title: 'ابدأ بـ==مهمة وحدة==', subtitle: 'صورة يولّدها الذكاء الاصطناعي' },
+    ranking: {
+      type: 'ranking', kicker: 'أتمتة', title: 'أكثر مهام ==تستاهل الأتمتة==', subtitle: 'من الأسهل للأصعب',
+      bullets: ['💬 الرد على العملاء | واتساب | الأسهل', '📅 حجز المواعيد | تذكير | سريع', '🤝 المتابعة | بعد التواصل', '📊 التقارير | أسبوعية', '🧾 الفواتير | تذكير بالدفع'],
+    },
   };
   return samples[type] || { type, title: t.nameAr };
 }
@@ -945,4 +1033,36 @@ function LinkedInIcon() {
       <path fill="#fff" d="M11 16h4v13h-4zM13 9.6a2.3 2.3 0 1 1 0 4.6 2.3 2.3 0 0 1 0-4.6zM17.6 16h3.8v1.8h.1c.5-1 1.8-2.1 3.8-2.1 4 0 4.8 2.6 4.8 6V29h-4v-6.4c0-1.5 0-3.5-2.1-3.5s-2.5 1.7-2.5 3.4V29h-3.9z" />
     </svg>
   );
+}
+
+// GIF previews: the scene drawn on a canvas, scaled to the width we need
+const GIF_SAMPLE = { type: 'chat', kicker: 'وكيلك الذكي', title: 'أبي أحجز ==موعد==', bullets: ['أكيد، الثلاثاء ٥ العصر يناسبك؟', 'تم الحجز ✓'] };
+const gifBox = (width: number) => ({ width, height: (width * 1350) / 1080, display: 'block', borderRadius: 14 });
+
+// Plays the animation live (same drawing code that makes the GIF)
+function GifStage({ slide, width }: { slide: Slide; width: number }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const key = JSON.stringify(slide);
+  useEffect(() => {
+    let stop: (() => void) | null = null;
+    let cancelled = false;
+    if (ref.current) {
+      playGif(slide as never, ref.current).then((s) => (cancelled ? s() : (stop = s)));
+    }
+    return () => {
+      cancelled = true;
+      stop?.();
+    };
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  return <canvas ref={ref} width={1080} height={1350} className="slide-preview gif-canvas" style={gifBox(width)} aria-label="معاينة الـGIF" role="img" />;
+}
+
+// One still frame: the first one (what the feed shows first) or the finished one (template picker)
+function GifStill({ slide, width, at = 0 }: { slide: Slide; width: number; at?: 0 | 'end' }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const key = JSON.stringify(slide);
+  useEffect(() => {
+    if (ref.current) gifFrame(slide as never, at, ref.current);
+  }, [key, at]); // eslint-disable-line react-hooks/exhaustive-deps
+  return <canvas ref={ref} width={1080} height={1350} style={gifBox(width)} aria-hidden="true" />;
 }

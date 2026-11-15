@@ -9,24 +9,25 @@ export const GIF_W = 1080;
 export const GIF_H = 1350;
 
 export type GifSlide = { type: string; kicker?: string; title?: string; bullets?: string[] };
-export type SceneEnv = { author: { ar: string; en: string }; photo: HTMLImageElement | null };
+// author null = no name chip at the bottom; dark = the forest-green background
+export type SceneEnv = { author: { ar: string; en: string } | null; photo: HTMLImageElement | null; dark?: boolean };
 export type Scene = { duration: number; draw: (t: number) => void };
 
 const HOLD = 2400; // the finished state stays on screen before the GIF loops
 
-function header(ctx: Ctx, s: GifSlide, topY: number) {
+function header(ctx: Ctx, s: GifSlide, topY: number, dark = false) {
   let y = topY;
   if (s.kicker) {
     ctx.font = `800 28px ${AR}`;
     ctx.direction = 'rtl';
     ctx.textAlign = 'center';
-    ctx.fillStyle = C.primary;
+    ctx.fillStyle = dark ? C.lime : C.primary;
     ctx.fillText(s.kicker, GIF_W / 2, y);
     y += 30;
   }
   const font = `800 56px ${AR}`;
   const lines = layout(ctx, s.title || '', font, 900, 2);
-  drawLines(ctx, lines, GIF_W / 2, y + 62, 74, font, C.heading, C.primary, 'center');
+  drawLines(ctx, lines, GIF_W / 2, y + 62, 74, font, dark ? '#fff' : C.heading, dark ? C.lime : C.primary, 'center');
   return y + 62 + (lines.length - 1) * 74 + 46;
 }
 
@@ -62,7 +63,7 @@ function chatScene(ctx: Ctx, s: GifSlide, env: SceneEnv): Scene {
   return {
     duration,
     draw(now) {
-      gridBg(ctx, GIF_W, GIF_H);
+      gridBg(ctx, GIF_W, GIF_H, env.dark);
       card(ctx, wx, wy, ww, wh, 40, { shadow: true, stroke: C.line });
       // header: agent avatar + name + online
       ctx.save();
@@ -140,7 +141,7 @@ function chatScene(ctx: Ctx, s: GifSlide, env: SceneEnv): Scene {
         }
       }
       ctx.restore();
-      authorChip(ctx, GIF_W / 2, 1200, env.photo, env.author.ar, env.author.en);
+      if (env.author) authorChip(ctx, GIF_W / 2, 1200, env.photo, env.author.ar, env.author.en, env.dark);
     },
   };
 }
@@ -160,9 +161,9 @@ function flowScene(ctx: Ctx, s: GifSlide, env: SceneEnv): Scene {
   return {
     duration,
     draw(now) {
-      gridBg(ctx, GIF_W, GIF_H);
+      gridBg(ctx, GIF_W, GIF_H, env.dark);
       const blockH = 68 + 34 + nodes.reduce((h, n) => h + n.h + 30, 0) + 64;
-      const headBottom = header(ctx, s, 96) + 18;
+      const headBottom = header(ctx, s, 96, env.dark) + 18;
       let y = Math.max(headBottom, headBottom + (1150 - headBottom - blockH) / 2);
       const boxX = x1 - 30 - 64; // number box (right side)
       const lineX = boxX + 32;
@@ -186,7 +187,7 @@ function flowScene(ctx: Ctx, s: GifSlide, env: SceneEnv): Scene {
       const endY = ny;
       // connector: dashed track + green progress
       ctx.save();
-      ctx.strokeStyle = C.lineStrong;
+      ctx.strokeStyle = env.dark ? 'rgba(255,255,255,0.28)' : C.lineStrong;
       ctx.lineWidth = 4;
       ctx.setLineDash([10, 10]);
       ctx.beginPath();
@@ -238,7 +239,7 @@ function flowScene(ctx: Ctx, s: GifSlide, env: SceneEnv): Scene {
         ctx.fillText('✓ تم', x1 - pw / 2, endY + 42);
         ctx.globalAlpha = 1;
       }
-      authorChip(ctx, GIF_W / 2, 1200, env.photo, env.author.ar, env.author.en);
+      if (env.author) authorChip(ctx, GIF_W / 2, 1200, env.photo, env.author.ar, env.author.en, env.dark);
     },
   };
 }
@@ -296,9 +297,9 @@ function demoScene(ctx: Ctx, s: GifSlide, env: SceneEnv): Scene {
   return {
     duration,
     draw(now) {
-      gridBg(ctx, GIF_W, GIF_H);
+      gridBg(ctx, GIF_W, GIF_H, env.dark);
       wy = 300;
-      header(ctx, s, 96);
+      header(ctx, s, 96, env.dark);
       card(ctx, wx, wy, ww, wh, 40, { shadow: true, stroke: C.line });
       ctx.fillStyle = C.line;
       ctx.fillRect(wx, wy + barH, ww, 2);
@@ -386,7 +387,7 @@ function demoScene(ctx: Ctx, s: GifSlide, env: SceneEnv): Scene {
         ctx.lineWidth = 4;
         ctx.stroke();
       }
-      authorChip(ctx, GIF_W / 2, 1200, env.photo, env.author.ar, env.author.en);
+      if (env.author) authorChip(ctx, GIF_W / 2, 1200, env.photo, env.author.ar, env.author.en, env.dark);
     },
   };
 }

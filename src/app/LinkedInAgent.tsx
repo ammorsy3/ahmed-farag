@@ -71,7 +71,7 @@ const FIELD_NAMES: Record<string, string> = {
 };
 // field names that mean something else on one slide type
 const TYPE_FIELD_NAMES: Record<string, Record<string, string>> = {
-  ranking: { kicker: 'شارة صغيرة', bullets: 'العناصر بالترتيب (كل سطر: الاسم | ملاحظة | قيمة)' },
+  ranking: { kicker: 'شارة صغيرة', bullets: 'العناصر بالترتيب (كل سطر: إيموجي الاسم | ملاحظة | قيمة)' },
   demo: { kicker: 'اسم التطبيق', title: 'وش يسوي التطبيق', bullets: 'التبويبات (كل سطر: التبويب | وش يعرض)' },
   chat: { kicker: 'اسم الوكيل', title: 'رسالة العميل', bullets: 'ردود الوكيل (كل سطر رد)' },
   flow: { kicker: 'سطر صغير', title: 'وش يسوي سير العمل', bullets: 'الخطوات بالترتيب (كل سطر خطوة)' },
@@ -981,7 +981,7 @@ function sampleSlide(t: Template): Slide {
     picture: { type: 'picture', title: 'ابدأ بـ==مهمة وحدة==', subtitle: 'صورة يولّدها الذكاء الاصطناعي' },
     ranking: {
       type: 'ranking', kicker: 'أتمتة', title: 'أكثر مهام ==تستاهل الأتمتة==', subtitle: 'من الأسهل للأصعب',
-      bullets: ['الرد على العملاء | واتساب | الأسهل', 'حجز المواعيد | تذكير | سريع', 'المتابعة | بعد التواصل', 'التقارير | أسبوعية', 'الفواتير | تذكير بالدفع'],
+      bullets: ['💬 الرد على العملاء | واتساب | الأسهل', '📅 حجز المواعيد | تذكير | سريع', '🤝 المتابعة | بعد التواصل', '📊 التقارير | أسبوعية', '🧾 الفواتير | تذكير بالدفع'],
     },
   };
   return samples[type] || { type, title: t.nameAr };

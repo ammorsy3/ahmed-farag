@@ -138,6 +138,20 @@ export function layout(ctx: Ctx, text: string, font: string, maxW: number, maxLi
   return lines;
 }
 
+// One line that fits maxW (cut with "…" when it doesn't). Uses the current ctx.font.
+export function fitText(ctx: Ctx, text: string, maxW: number) {
+  const t = String(text || '').replace(/==/g, '').trim();
+  if (ctx.measureText(t).width <= maxW) return t;
+  const chars = Array.from(t);
+  let lo = 0, hi = chars.length;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (ctx.measureText(chars.slice(0, mid).join('').trimEnd() + '…').width <= maxW) lo = mid;
+    else hi = mid - 1;
+  }
+  return chars.slice(0, lo).join('').trimEnd() + '…';
+}
+
 // Draws laid-out lines. x is the right edge (align right) or the centre (align center).
 // reveal: how many characters are visible (typewriter), Infinity for all.
 export function drawLines(

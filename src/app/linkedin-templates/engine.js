@@ -144,6 +144,9 @@ export function renderDoc(template, data, brandCss, templatesById) {
         more: total > 1 && i < total - 1,
         // ownDots: true, or the layout keys that draw their own dots
         o: { ...o, xdots: o.dots && !(t.ownDots === true || (Array.isArray(t.ownDots) && t.ownDots.includes(key))) },
+        // list items as "name | note | value" (note and value optional), for ranking layouts:
+        // items = all, top = first 3, rest = the others; each keeps its rank ("01"…)
+        ...rankedItems(s.bullets),
       };
       const inner = fill(t.slides[key] || '', ctx);
       const foot = t.footer === false ? '' : fill(FOOTER, ctx);
@@ -161,6 +164,15 @@ export function renderDoc(template, data, brandCss, templatesById) {
   return `<!doctype html><html lang="ar"><head><meta charset="utf-8">
 <style>${brandCss}\n${css}</style></head>
 <body dir="rtl" class="doc">${body}</body></html>`;
+}
+
+function rankedItems(bullets) {
+  if (!Array.isArray(bullets)) return {};
+  const items = bullets.map((b, i) => {
+    const [name = '', note = '', value = ''] = String(b).split('|').map((x) => x.trim());
+    return { name, note, value, rank: String(i + 1).padStart(2, '0'), initial: Array.from(name.replace(/==/g, '').trim())[0] || '' };
+  });
+  return { items, top: items.slice(0, 3), rest: items.slice(3) };
 }
 
 // Shared extras the engine draws on top of any template (switched by slide options)

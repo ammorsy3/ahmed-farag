@@ -293,7 +293,7 @@
 /* ---------- history ---------- */
 .li-app .history { margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--line); }
 .li-app .history-head { display: flex; justify-content: space-between; align-items: baseline; }
-.li-app .li-history { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.li-app .li-history { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
 .li-app .li-history li {
   display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); font-size: 14px;
 }
@@ -375,3 +375,18 @@
 .li-app .feed-doc { padding: 8px 16px; font-size: 13px; font-weight: 600; background: #f8f7f5; border-bottom: 1px solid #ebe8e2; }
 .li-app .feed-media .slide-preview { border-radius: 0; }
 .li-app .feed-probe { position: absolute; top: 0; right: 0; visibility: hidden; pointer-events: none; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Arabic', 'Helvetica Neue', sans-serif; }
+
+/* ---------- five post types + GIF ---------- */
+.li-app .seg { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.li-app .gif-canvas { background: #0F1A14; }
+.li-app .file-box > div:first-child { min-width: 0; }
+.li-app .gif-progress { display: block; height: 6px; margin-top: 8px; border-radius: 6px; background: var(--line); overflow: hidden; }
+.li-app .gif-progress i { display: block; height: 100%; border-radius: 6px; background: var(--primary); transition: width 0.2s; }
+/* phone: three on top, two below */
+@media (max-width: 560px) {
+  .li-app .seg { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+  .li-app .seg-btn { grid-column: span 2; align-items: center; justify-content: center; text-align: center; padding: 8px 4px; min-height: 46px; }
+  .li-app .seg-btn:nth-child(n + 4) { grid-column: span 3; }
+  .li-app .seg-btn strong { font-size: 14px; white-space: nowrap; }
+  .li-app .seg-btn span { display: none; }
+}

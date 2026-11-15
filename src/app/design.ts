@@ -1,7 +1,7 @@
 // Carousel design helpers for /app: per-slide templates, layouts, switches and "auto rhythm".
 import { SHARED_OPTIONS, limitsFor, slideKey, slideTemplate, type OptionDef, type SlideData, type TemplateLike } from './linkedin-templates/engine.js';
 
-export type DesignTemplate = TemplateLike & { kind: 'carousel' | 'image'; nameAr: string };
+export type DesignTemplate = TemplateLike & { kind: 'carousel' | 'image' | 'ranking' | 'gif'; nameAr: string };
 export type Opts = Record<string, boolean>;
 
 const DARK = 'forest-dark';

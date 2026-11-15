@@ -170,10 +170,12 @@ function rankedItems(bullets) {
   if (!Array.isArray(bullets)) return {};
   const items = bullets.map((b, i) => {
     const [raw = '', note = '', value = ''] = String(b).split('|').map((x) => x.trim());
-    // "💬 name": a leading emoji is the item's icon
-    const m = raw.match(/^(\p{Extended_Pictographic}(?:\p{Variation_Selector}|\p{Emoji_Modifier}|\p{Join_Control}\p{Extended_Pictographic})*)\s*/u);
-    const name = m ? raw.slice(m[0].length) : raw;
-    return { name, note, value, icon: m ? m[1] : '', rank: String(i + 1).padStart(2, '0'), initial: Array.from(name.replace(/==/g, '').trim())[0] || '' };
+    // "[whatsapp] name": a brand logo (the template's logo list); "💬 name": an emoji icon
+    const lg = raw.match(/^\[([a-z0-9]+)\]\s*/);
+    const rest = lg ? raw.slice(lg[0].length) : raw;
+    const m = rest.match(/^(\p{Extended_Pictographic}(?:\p{Variation_Selector}|\p{Emoji_Modifier}|\p{Join_Control}\p{Extended_Pictographic})*)\s*/u);
+    const name = m ? rest.slice(m[0].length) : rest;
+    return { name, note, value, logo: lg ? lg[1] : '', icon: m ? m[1] : '', rank: String(i + 1).padStart(2, '0'), initial: Array.from(name.replace(/==/g, '').trim())[0] || '' };
   });
   return { items, top: items.slice(0, 3), rest: items.slice(3) };
 }

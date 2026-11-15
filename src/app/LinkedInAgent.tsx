@@ -100,19 +100,49 @@ const MAX_BYTES = 4_400_000;
 const mb = (n: number) => (n / 1_000_000).toFixed(1);
 export const SIGNED_OUT_EVENT = 'app:signed-out';
 
+// resolves when the page is on screen again
+function whenVisible() {
+  if (document.visibilityState === 'visible') return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    const on = () => {
+      if (document.visibilityState !== 'visible') return;
+      document.removeEventListener('visibilitychange', on);
+      resolve();
+    };
+    document.addEventListener('visibilitychange', on);
+  });
+}
+
 async function callAgent<T>(body: Record<string, unknown>, signal?: AbortSignal): Promise<T> {
   const payload = JSON.stringify(body);
   const size = new Blob([payload]).size;
   if (size > MAX_BYTES) {
     throw new Error(`الطلب كبير (${mb(size)} MB) والحد ${mb(MAX_BYTES)} MB. غالباً الصورة كبيرة؛ جرّب «صورة ثانية» أو قالب بدون صورة.`);
   }
-  const res = await fetch('/api/linkedin', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: payload,
-    signal,
-  });
-  const text = await res.text();
+  // A phone pauses a page in the background (screen locked, another app) and drops its connections:
+  // the answer is lost even when n8n finished. Everything but publish is safe to ask again.
+  let res: Response;
+  let text: string;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      res = await fetch('/api/linkedin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        signal,
+      });
+      text = await res.text();
+      break;
+    } catch (e) {
+      if ((e as Error).name === 'AbortError') throw e;
+      if (body.action === 'publish') {
+        throw new Error('انقطع الاتصال وقت النشر، فما نعرف إذا انتشر أو لا. شيّك «منشوراتي على لينكدإن» تحت قبل ما تنشر مرة ثانية.');
+      }
+      if (attempt >= 1) throw new Error('انقطع الاتصال (غالباً قفلت الشاشة أو تغيّر النت). جرّب مرة ثانية وخلّ الصفحة مفتوحة لين يخلص.');
+      await whenVisible();
+      await new Promise((r) => setTimeout(r, 800));
+    }
+  }
   if (res.status === 401) {
     window.dispatchEvent(new Event(SIGNED_OUT_EVENT));
     throw new Error('انتهت الجلسة. ادخل كلمة المرور مرة ثانية.');
@@ -449,6 +479,8 @@ export default function LinkedInAgent() {
     } catch (err) {
       setError((err as Error).message);
       setPhase('review');
+      // a dropped connection may still have posted: show the latest history
+      loadHistory();
     } finally {
       inFlight.current = false;
     }

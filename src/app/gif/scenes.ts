@@ -3,7 +3,7 @@
 //   flow  «سير عمل»: workflow steps light up from the trigger to "✓ تم"
 //   demo  «عرض تطبيق»: an app window; the cursor clicks each tab and its panel fills in
 // Each scene is drawn on a 1080×1350 canvas at any time t (ms), so frames can be rendered in order.
-import { AR, C, EN, authorChip, card, charCount, check, clamp01, cursor, drawLines, ease, gridBg, layout, rr, span, windowDots, type Ctx } from './draw';
+import { AR, C, EN, authorChip, card, charCount, check, clamp01, cursor, drawLines, ease, fitText, gridBg, layout, rr, span, windowDots, type Ctx } from './draw';
 
 export const GIF_W = 1080;
 export const GIF_H = 1350;
@@ -245,9 +245,15 @@ function flowScene(ctx: Ctx, s: GifSlide, env: SceneEnv): Scene {
 }
 
 // ---------------- demo ----------------
+// "Tab | what it shows". A whole sentence (no "|") becomes a short tab name (its first words)
+// and the sentence goes in the panel, so no panel is left empty.
 function splitTab(b: string) {
   const m = String(b).split(/\s*[|:：]\s*/);
-  return { name: (m[0] || '').trim(), desc: m.slice(1).join(' ').trim() };
+  const name = (m[0] || '').trim();
+  const desc = m.slice(1).join(' ').trim();
+  if (desc) return { name, desc };
+  const words = name.split(/\s+/);
+  return words.length > 3 ? { name: words.slice(0, 3).join(' '), desc: name } : { name, desc: '' };
 }
 
 function demoScene(ctx: Ctx, s: GifSlide, env: SceneEnv): Scene {
@@ -272,15 +278,32 @@ function demoScene(ctx: Ctx, s: GifSlide, env: SceneEnv): Scene {
         ];
   const descFont = `400 30px ${AR}`;
   const descLines = tabs.map((tb, i) => layout(ctx, tb.desc, descFont, rects[i].w - 64, i === 0 ? 4 : 3));
-  // tab pills, laid out from the right edge of the title bar
-  ctx.font = `600 28px ${AR}`;
+  // tab pills, laid out from the right edge of the title bar, clear of the window dots on the left;
+  // long names get a smaller font, then a "…"
+  const barRoom = ww - 30 - 150;
+  let tabSize = 28;
   ctx.direction = 'rtl';
+  const widthAt = (size: number) => {
+    ctx.font = `600 ${size}px ${AR}`;
+    return tabs.reduce((sum, tb) => sum + ctx.measureText(tb.name).width + 44 + 10, -10);
+  };
+  while (tabSize > 22 && widthAt(tabSize) > barRoom) tabSize -= 2;
+  const tabFont = `600 ${tabSize}px ${AR}`;
+  ctx.font = tabFont;
+  const maxPill = (barRoom - 10 * (n - 1)) / n;
+  const tabLabels = tabs.map((tb) => (widthAt(tabSize) > barRoom ? fitText(ctx, tb.name, maxPill - 44) : tb.name));
+  ctx.font = tabFont;
   let tx = wx + ww - 30;
-  const pills = tabs.map((tb) => {
-    const pw = ctx.measureText(tb.name).width + 44;
+  const pills = tabLabels.map((label) => {
+    const pw = ctx.measureText(label).width + 44;
     const p = { x: tx - pw, w: pw };
     tx -= pw + 10;
     return p;
+  });
+  // panel titles fit their panel
+  const titles = tabs.map((tb, i) => {
+    ctx.font = `800 ${i === 0 ? 40 : 32}px ${AR}`;
+    return fitText(ctx, tb.name, rects[i].w - 64);
   });
   // timeline per tab: move 700, click 150, type, pause
   const plan: { at: number; move: number; type: number }[] = [];
@@ -319,7 +342,7 @@ function demoScene(ctx: Ctx, s: GifSlide, env: SceneEnv): Scene {
         }
       });
       // tabs
-      tabs.forEach((tb, i) => {
+      tabs.forEach((_tb, i) => {
         const p = pills[i];
         const on = i === active;
         if (on) {
@@ -328,13 +351,13 @@ function demoScene(ctx: Ctx, s: GifSlide, env: SceneEnv): Scene {
           ctx.fill();
         }
         ctx.fillStyle = on ? '#fff' : C.body;
-        ctx.font = `600 28px ${AR}`;
+        ctx.font = tabFont;
         ctx.textAlign = 'center';
         ctx.direction = 'rtl';
-        ctx.fillText(tb.name, p.x + p.w / 2, wy + barH / 2 + 10);
+        ctx.fillText(tabLabels[i], p.x + p.w / 2, wy + barH / 2 + 10);
       });
       // panels
-      tabs.forEach((tb, i) => {
+      tabs.forEach((_tb, i) => {
         const r = rects[i];
         const on = i === active;
         const seen = active >= i;
@@ -343,7 +366,7 @@ function demoScene(ctx: Ctx, s: GifSlide, env: SceneEnv): Scene {
         ctx.font = `800 ${i === 0 ? 40 : 32}px ${AR}`;
         ctx.textAlign = 'right';
         ctx.direction = 'rtl';
-        ctx.fillText(tb.name, r.x + r.w - 32, r.y + (i === 0 ? 62 : 54));
+        ctx.fillText(titles[i], r.x + r.w - 32, r.y + (i === 0 ? 62 : 54));
         if (seen) {
           const p = plan[i];
           const typedFrom = p.at + p.move + 150;
